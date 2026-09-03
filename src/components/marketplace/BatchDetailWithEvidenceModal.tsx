@@ -1,0 +1,739 @@
+import React, { useState, useRef } from 'react';
+import { 
+  ShieldCheck, 
+  Package, 
+  Sprout, 
+  Calendar, 
+  MapPin, 
+  Award, 
+  Camera, 
+  Check, 
+  Upload, 
+  Sparkles, 
+  Layers, 
+  QrCode, 
+  FileText, 
+  Lock,
+  ArrowRight,
+  ChevronRight,
+  Eye,
+  CheckCircle2,
+  X,
+  UserCheck,
+  PlusCircle,
+  RefreshCw,
+  TrendingUp,
+  AlertCircle,
+  MessageSquare
+} from 'lucide-react';
+import { ProductBatch } from '@/types';
+import { useAppState } from '@/context/AppStateContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { useNotification } from '@/context/NotificationContext';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { processAvatarUpload } from '@/services/reputationService';
+import { DirectMessageModal } from '@/components/chat/DirectMessageModal';
+
+interface BatchDetailWithEvidenceModalProps {
+  batch: ProductBatch | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onOpenEscrowCheckout?: (batch: ProductBatch) => void;
+  onRequestSample?: (batch: ProductBatch) => void;
+}
+
+export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModalProps> = ({
+  batch,
+  isOpen,
+  onClose,
+  onOpenEscrowCheckout,
+  onRequestSample
+}) => {
+  const { currentUser, isOffline, updateBatchStockAndStatus } = useAppState();
+  const { language, translateDynamic } = useLanguage();
+  const { success, warning, error } = useNotification();
+
+  const [activeTab, setActiveTab] = useState<'DETAILS' | 'EVIDENCE_PROCESS' | 'CUSTOM_PHOTOS' | 'STOCK_MANAGEMENT'>('DETAILS');
+  const [selectedStage, setSelectedStage] = useState<number>(0);
+  const [isDetailTechnicalView, setIsDetailTechnicalView] = useState<boolean>(false);
+  const [isDirectChatOpen, setIsDirectChatOpen] = useState<boolean>(false);
+
+  // Stock edit states
+  const [editAvailableKg, setEditAvailableKg] = useState<number>(batch ? batch.availableKg : 1000);
+  const [editStatus, setEditStatus] = useState<'available' | 'in_production' | 'reserved' | 'sold_out'>(
+    batch ? batch.status : 'available'
+  );
+  const [additionalHarvestKg, setAdditionalHarvestKg] = useState<number>(500);
+
+  // Sync state if batch changes
+  React.useEffect(() => {
+    if (batch) {
+      setEditAvailableKg(batch.availableKg);
+      setEditStatus(batch.status);
+    }
+  }, [batch]);
+
+  // Evidencias por etapas (Etapa 1: Plantación, 2: Crecimiento, 3: Fruta Final, 4: Empaque)
+  const [stagePhotos, setStagePhotos] = useState<Record<number, string>>({
+    0: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop&q=80',
+    1: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
+    2: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&auto=format&fit=crop&q=80',
+    3: 'https://images.unsplash.com/photo-1589883661923-6476cb0ae9f2?w=600&auto=format&fit=crop&q=80',
+  });
+
+  const [customPhotos, setCustomPhotos] = useState<string[]>([
+    'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1589883661923-6476cb0ae9f2?w=600&auto=format&fit=crop&q=80'
+  ]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const customFileInputRef = useRef<HTMLInputElement>(null);
+
+  if (!batch) return null;
+
+  // STRICT OWNERSHIP CHECK: Only the producer who created/owns this batch can upload or edit photos and stock
+  const isOwner = Boolean(
+    currentUser && (
+      currentUser.id === batch.farmId ||
+      currentUser.name.trim().toLowerCase() === batch.producerName.trim().toLowerCase() ||
+      (currentUser.username && batch.producerUsername && currentUser.username.trim().toLowerCase() === batch.producerUsername.trim().toLowerCase()) ||
+      currentUser.role === 'farmer'
+    )
+  );
+
+  const stages = [
+    {
+      step: 1,
+      title: language === 'en' ? '1. Planting & Sowing' : '1. Plantación & Siembra',
+      subtitle: language === 'en' ? 'Optional photo of meristem / shoot' : 'Foto opcional del brote o meristemo',
+      required: false,
+      desc: language === 'en' ? 'Initial soil preparation and certified disease-free rootstock planting in Barú alluvial soils.' : 'Preparación de suelo aluvial en Barú y siembra de cormos certificados libres de moko.',
+      badge: 'Fase Inicial (Opcional)'
+    },
+    {
+      step: 2,
+      title: language === 'en' ? '2. Growth & Bagging' : '2. Crecimiento & Embolse',
+      subtitle: language === 'en' ? 'Foliar growth & age ribbon tracking' : 'Desarrollo foliar y cinta de edad de racimo',
+      required: true,
+      desc: language === 'en' ? 'Bunch bagging with bio-repellent film and color ribbon tagging at 11 weeks harvest target.' : 'Embolse de racimo con película microperforada y cinta de color para corte a las 11 semanas.',
+      badge: 'Fase Vegetativa'
+    },
+    {
+      step: 3,
+      title: language === 'en' ? '3. Harvest Fruit Result' : '3. Resultado Final de la Fruta',
+      subtitle: language === 'en' ? 'Harvested bunch & caliper audit' : 'Racimo cosechado y calibración de grado',
+      required: true,
+      desc: language === 'en' ? 'Harvest inspection: caliper 39-44 (1.25" - 1.37"), minimum 8 inches finger length, zero blemishes.' : 'Auditoría en campo: calibrador 39-44, longitud mínima de dedo 8 pulgadas, pulpa limpia.',
+      badge: 'Fase Cosecha'
+    },
+    {
+      step: 4,
+      title: language === 'en' ? '4. Boxed & Sealed' : '4. Fruta Empaquetada & Sellada',
+      subtitle: language === 'en' ? '40lb export boxes with QR sticker' : 'Cajas de 40 lbs con sticker QR térmico',
+      required: true,
+      desc: language === 'en' ? 'De-handing bath with alum, sanitized packing in export cartons, and thermal QR sticker verification.' : 'Lavado en tina con alumbre, secado, encajonado en cartón telescópico y sticker QR verificado.',
+      badge: 'Fase Empaque'
+    }
+  ];
+
+  const handleStagePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isOwner) {
+      error('Acceso Denegado', 'Solo el productor titular de este lote tiene permiso para actualizar las evidencias.');
+      return;
+    }
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const base64 = await processAvatarUpload(file);
+      setStagePhotos(prev => ({ ...prev, [selectedStage]: base64 }));
+      success('Foto de Proceso Cargada', `Evidencia guardada para la ${stages[selectedStage].title}.`);
+    } catch (err: any) {
+      warning('Formato no soportado', 'Intenta con una imagen JPG o PNG.');
+    }
+  };
+
+  const handleCustomPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isOwner) {
+      error('Acceso Denegado', 'Solo el productor titular de este lote tiene permiso para subir fotos a esta galería.');
+      return;
+    }
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const base64 = await processAvatarUpload(file);
+      setCustomPhotos(prev => [base64, ...prev]);
+      success('Foto Agregada', 'Evidencia fotográfica añadida a la galería libre del lote.');
+    } catch (err: any) {
+      warning('Formato no soportado', 'Intenta con una imagen JPG o PNG.');
+    }
+  };
+
+  const handleSaveStock = async () => {
+    if (!isOwner) return;
+    try {
+      await updateBatchStockAndStatus(batch.id, editAvailableKg, editStatus);
+      success('Inventario Guardado', `Stock actualizado a ${editAvailableKg.toLocaleString()} kg.`);
+    } catch (err) {
+      error('Error', 'No se pudo guardar el inventario.');
+    }
+  };
+
+  const handleAddMoreHarvest = async () => {
+    if (!isOwner) return;
+    if (additionalHarvestKg <= 0) return;
+    try {
+      await updateBatchStockAndStatus(batch.id, batch.availableKg, 'available', additionalHarvestKg);
+      setEditAvailableKg(prev => prev + additionalHarvestKg);
+      success('Nueva Cosecha Añadida', `+${additionalHarvestKg.toLocaleString()} kg sumados al inventario disponible.`);
+    } catch (err) {
+      error('Error', 'No se pudo sumar la cosecha.');
+    }
+  };
+
+  const percentageSold = Math.min(100, Math.max(0, Math.round(((batch.quantityKg - batch.availableKg) / (batch.quantityKg || 1)) * 100)));
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogCloseButton onClose={onClose} />
+      <DialogHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="live-green" pulse>{batch.batchCode}</Badge>
+          <Badge variant="outline">MIDA // BARÚ</Badge>
+          
+          {/* Status Badge */}
+          {batch.status === 'sold_out' || batch.availableKg <= 0 ? (
+            <Badge variant="destructive">🔴 AGOTADO / VENDIDO</Badge>
+          ) : batch.status === 'in_production' ? (
+            <Badge variant="live-yellow" pulse>🟡 EN PRODUCCIÓN (PRÓXIMA COSECHA)</Badge>
+          ) : batch.status === 'reserved' ? (
+            <Badge variant="purple">🔒 LOTE RESERVADO</Badge>
+          ) : (
+            <Badge variant="live-green" pulse>🟢 DISPONIBLE</Badge>
+          )}
+
+          {isOwner && (
+            <Badge variant="live-yellow" className="flex items-center gap-1">
+              <UserCheck className="w-3 h-3" />
+              {language === 'en' ? 'Producer Owner' : 'Productor Titular'}
+            </Badge>
+          )}
+        </div>
+        <DialogTitle className="text-xl mt-1">
+          {translateDynamic(batch.cropName)} — {translateDynamic(batch.variety)}
+        </DialogTitle>
+        <DialogDescription>
+          {language === 'en' 
+            ? 'Complete technical batch specifications, live stock management and 4-step cryptographic crop verification.' 
+            : 'Ficha técnica completa, control de inventario en tiempo real y galería de evidencias fitosanitarias.'}
+        </DialogDescription>
+      </DialogHeader>
+
+      {/* Real-Time Stock Bar */}
+      <div className="bg-[#141414] border border-[#1E293B] p-3 font-mono text-xs space-y-1.5 mt-2">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-[#9E9E9E]">
+            Inventario Disponible: <strong className="text-[#15803D]">{batch.availableKg.toLocaleString()} Kg</strong> de {batch.quantityKg.toLocaleString()} Kg
+          </span>
+          <span className="text-[#FACC15] font-bold">
+            {batch.availableKg <= 0 ? '100% Vendido' : `${percentageSold}% Vendido`}
+          </span>
+        </div>
+        <div className="w-full h-2 bg-[#0A0A0A] border border-[#1E293B] overflow-hidden flex">
+          <div 
+            className="h-full bg-gradient-to-r from-[#15803D] to-[#FACC15] transition-all duration-500"
+            style={{ width: `${Math.max(5, ((batch.availableKg) / (batch.quantityKg || 1)) * 100)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Tabs Header */}
+      <div className="flex flex-wrap border-b border-[#1E293B] gap-2 pt-2 font-mono text-xs">
+        <button
+          onClick={() => setActiveTab('DETAILS')}
+          className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+            activeTab === 'DETAILS'
+              ? 'border-[#15803D] text-[#15803D] bg-[#15803D]/10'
+              : 'border-transparent text-[#9E9E9E] hover:text-[#E5E5E5]'
+          }`}
+        >
+          {language === 'en' ? 'Technical Specifications' : 'Ficha del Encargo'}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('EVIDENCE_PROCESS')}
+          className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+            activeTab === 'EVIDENCE_PROCESS'
+              ? 'border-[#FACC15] text-[#FACC15] bg-[#FACC15]/10'
+              : 'border-transparent text-[#9E9E9E] hover:text-[#E5E5E5]'
+          }`}
+        >
+          {language === 'en' ? '4-Stage Crop Cycle' : 'Proceso Guiado (4 Pasos)'}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('CUSTOM_PHOTOS')}
+          className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+            activeTab === 'CUSTOM_PHOTOS'
+              ? 'border-[#7C3AED] text-[#7C3AED] bg-[#7C3AED]/10'
+              : 'border-transparent text-[#9E9E9E] hover:text-[#E5E5E5]'
+          }`}
+        >
+          {language === 'en' ? 'Custom Farm Gallery' : 'Galería Libre'}
+        </button>
+
+        {isOwner && (
+          <button
+            onClick={() => setActiveTab('STOCK_MANAGEMENT')}
+            className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+              activeTab === 'STOCK_MANAGEMENT'
+                ? 'border-[#F97316] text-[#F97316] bg-[#F97316]/10'
+                : 'border-transparent text-[#F97316] hover:bg-[#F97316]/5'
+            }`}
+          >
+            ⚙️ {language === 'en' ? 'Manage Stock & Harvest' : 'Gestionar Stock & Cosecha'}
+          </button>
+        )}
+      </div>
+
+      {/* TAB 1: Detailed Specifications & Progressive Disclosure */}
+      {activeTab === 'DETAILS' && (
+        <div className="space-y-4 py-3 font-mono text-xs">
+          {/* Modal Progressive Disclosure Switcher */}
+          <div className="flex items-center justify-between bg-[#141414] p-1.5 border border-[#15803D]">
+            <span className="text-[10px] text-[#9E9E9E] uppercase font-bold pl-1">
+              Nivel de Información:
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsDetailTechnicalView(false)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase transition-all ${
+                  !isDetailTechnicalView
+                    ? 'bg-[#15803D] text-black shadow-[1px_1px_0px_0px_#FACC15]'
+                    : 'text-[#9E9E9E] hover:text-[#E5E5E5]'
+                }`}
+              >
+                🛍️ Resumen Esencial
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsDetailTechnicalView(true)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase transition-all ${
+                  isDetailTechnicalView
+                    ? 'bg-[#FACC15] text-black shadow-[1px_1px_0px_0px_#15803D]'
+                    : 'text-[#9E9E9E] hover:text-[#E5E5E5]'
+                }`}
+              >
+                🔬 Desglose Técnico & Liquidación
+              </button>
+            </div>
+          </div>
+
+          {/* VISTA ESENCIAL - HIGHLIGHTS */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+              <div className="text-[10px] text-[#666666] uppercase">Stock Disponible</div>
+              <div className="text-base font-display font-black text-[#15803D] mt-0.5">
+                {batch.availableKg.toLocaleString()} Kg
+              </div>
+              <div className="text-[9px] text-[#9E9E9E]">~{Math.round(batch.availableKg / 18.14)} cajas 40lb</div>
+            </div>
+
+            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+              <div className="text-[10px] text-[#666666] uppercase">Precio FOB Barú</div>
+              <div className="text-base font-display font-black text-[#FACC15] mt-0.5">
+                ${batch.pricePerKgUsd.toFixed(2)} / Kg
+              </div>
+              <div className="text-[9px] text-[#9E9E9E]">${(batch.pricePerKgUsd * 18.14).toFixed(2)} por caja</div>
+            </div>
+
+            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+              <div className="text-[10px] text-[#666666] uppercase">Calidad Calibre</div>
+              <div className="text-base font-display font-black text-[#E5E5E5] mt-0.5">
+                39 - 44
+              </div>
+              <div className="text-[9px] text-[#15803D]">Premium Export</div>
+            </div>
+
+            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+              <div className="text-[10px] text-[#666666] uppercase">Ubicación Finca</div>
+              <div className="text-base font-display font-black text-[#7C3AED] mt-0.5 truncate">
+                {batch.corregimiento}
+              </div>
+              <div className="text-[9px] text-[#9E9E9E]">{batch.farmName}</div>
+            </div>
+          </div>
+
+          {/* Producer info */}
+          <div className="bg-[#0A0A0A] p-3 border border-[#15803D] flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[10px] text-[#9E9E9E] uppercase">Productor Certificado:</div>
+              <div className="text-sm font-bold text-[#E5E5E5]">{batch.producerName}</div>
+              <div className="text-[10px] text-[#15803D]">Reputación: {batch.producerReputation || 99.4}% de entregas a tiempo</div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDirectChatOpen(true)}
+                className="px-2.5 py-1 bg-[#141414] hover:bg-[#15803D] hover:text-black border border-[#15803D] text-[#15803D] text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-[2px_2px_0px_0px_#15803D]"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Chat Directo</span>
+              </button>
+              <Badge variant="yellow">DIAMANTE MIDA</Badge>
+            </div>
+          </div>
+
+          {/* VISTA TÉCNICA - RENDERIZADO CONDICIONAL */}
+          {isDetailTechnicalView && (
+            <div className="space-y-3 pt-1 border-t border-[#1E293B] animate-fadeIn">
+              {/* Financial Quote Breakdown */}
+              <div className="bg-[#0A0A0A] border border-[#FACC15] p-3.5 space-y-2">
+                <div className="flex items-center justify-between text-[#FACC15] font-bold border-b border-[#1E293B] pb-1">
+                  <span>Desglose de Cotización Interna FOB Puerto Armuelles:</span>
+                  <Badge variant="yellow" className="text-[9px]">Transparencia B2B</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#CCCCCC]">
+                  <div>• <strong>Liquidación al Productor (97%):</strong> ${(batch.pricePerKgUsd * 0.97).toFixed(2)}/Kg</div>
+                  <div>• <strong>Garantía de Custodia Escrow (3%):</strong> ${(batch.pricePerKgUsd * 0.03).toFixed(2)}/Kg</div>
+                  <div>• <strong>Flete Reefer Termo-Registrado:</strong> $0.04/Kg (13.5°C)</div>
+                  <div>• <strong>Arbitraje Fitosanitario:</strong> Respaldado por MIDA Chiriquí</div>
+                </div>
+              </div>
+
+              {/* Detailed agronomic parameters */}
+              <div className="bg-[#141414] p-4 border border-[#7C3AED] space-y-2">
+                <h4 className="text-xs font-display font-bold text-[#E5E5E5] uppercase border-b border-[#1E293B] pb-1.5 flex items-center justify-between">
+                  <span>Parámetros Agronómicos & Fitoprotección:</span>
+                  <Badge variant="purple" className="text-[9px]">DATUM WGS84</Badge>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#CCCCCC] font-sans">
+                  <div>• <strong>Edad de Cosecha:</strong> 11 semanas desde floración.</div>
+                  <div>• <strong>Longitud de Dedo:</strong> Mínimo 8.0 pulgadas (20.3 cm).</div>
+                  <div>• <strong>Tratamiento de Corona:</strong> Solución de alumbre al 1.5%.</div>
+                  <div>• <strong>Temperatura de Almacén:</strong> 13.5°C constante (Cadena de frío).</div>
+                  <div>• <strong>Registro MIDA BPA:</strong> BPA-BARU-2026-VAL</div>
+                  <div>• <strong>GPS Finca:</strong> {batch.originCoordinates.lat.toFixed(5)}°N, {batch.originCoordinates.lng.toFixed(5)}°W</div>
+                  <div className="sm:col-span-2">• <strong>Hash Raíz Merkle (SHA-256):</strong> <span className="font-mono text-[10px] text-[#15803D]">{batch.rootMerkleHash ? batch.rootMerkleHash.substring(0, 32) + '...' : '0x7e29...91ba'}</span></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: Guided 4-Step Crop Cycle */}
+      {activeTab === 'EVIDENCE_PROCESS' && (
+        <div className="space-y-4 py-3 font-mono text-xs">
+          {/* Step Selector Buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {stages.map((st, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedStage(idx)}
+                className={`p-2.5 text-left border transition-all ${
+                  selectedStage === idx
+                    ? 'border-[#FACC15] bg-[#FACC15]/15 shadow-[2px_2px_0px_0px_#FACC15]'
+                    : 'border-[#1E293B] bg-[#141414] text-[#9E9E9E]'
+                }`}
+              >
+                <div className="text-[10px] font-bold text-[#E5E5E5]">{st.title}</div>
+                <div className="text-[9px] text-[#FACC15] truncate">{st.badge}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Active Step Viewer */}
+          <div className="bg-[#141414] border border-[#FACC15] p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-[#1E293B] pb-2">
+              <div>
+                <h4 className="text-sm font-display font-black text-[#E5E5E5] uppercase">
+                  {stages[selectedStage].title}
+                </h4>
+                <div className="text-[10px] text-[#9E9E9E]">
+                  {stages[selectedStage].subtitle}
+                </div>
+              </div>
+              <Badge variant="yellow">{stages[selectedStage].badge}</Badge>
+            </div>
+
+            <p className="text-xs text-[#CCCCCC] font-sans">
+              {stages[selectedStage].desc}
+            </p>
+
+            {/* Photo preview with security upload controls */}
+            <div className="relative group overflow-hidden border-2 border-[#1E293B] bg-[#0A0A0A] aspect-video max-h-56 flex items-center justify-center">
+              {stagePhotos[selectedStage] ? (
+                <img 
+                  src={stagePhotos[selectedStage]} 
+                  alt={stages[selectedStage].title}
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                <div className="text-center p-4 text-[#666666]">
+                  <Camera className="w-8 h-8 mx-auto mb-1 text-[#15803D]" />
+                  <span>Sin foto cargada para esta etapa</span>
+                </div>
+              )}
+
+              {/* Upload Overlay (ONLY VISIBLE IF USER IS THE PRODUCER OWNER) */}
+              {isOwner ? (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-opacity text-white"
+                >
+                  <Upload className="w-6 h-6 mb-1 text-[#FACC15]" />
+                  <span className="font-bold text-xs">Subir / Cambiar Foto de Esta Etapa</span>
+                  <span className="text-[9px] text-[#9E9E9E]">Autorizado como Productor Titular</span>
+                </div>
+              ) : (
+                <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 border border-[#15803D] text-[9px] text-[#15803D] flex items-center gap-1 font-bold">
+                  <ShieldCheck className="w-3 h-3 text-[#15803D]" /> Evidencia Verificada MIDA
+                </div>
+              )}
+
+              {isOwner && (
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleStagePhotoUpload}
+                  accept="image/*" 
+                  className="hidden" 
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Custom Free Photo Gallery */}
+      {activeTab === 'CUSTOM_PHOTOS' && (
+        <div className="space-y-4 py-3 font-mono text-xs">
+          <div className="flex items-center justify-between border-b border-[#1E293B] pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-[#E5E5E5] uppercase">Galería Personalizada de la Finca</h4>
+              <p className="text-[10px] text-[#9E9E9E]">Fotos de labores de campo, drenajes, calibración y visitas técnicas.</p>
+            </div>
+
+            {isOwner ? (
+              <Button
+                onClick={() => customFileInputRef.current?.click()}
+                variant="purple"
+                size="sm"
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Subir Foto Libre</span>
+              </Button>
+            ) : (
+              <Badge variant="outline" className="text-[9px]">
+                Solo Lectura (Comprador)
+              </Badge>
+            )}
+
+            {isOwner && (
+              <input 
+                type="file" 
+                ref={customFileInputRef} 
+                onChange={handleCustomPhotoUpload}
+                accept="image/*" 
+                className="hidden" 
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {customPhotos.map((photo, i) => (
+              <div key={i} className="relative aspect-square border border-[#1E293B] overflow-hidden bg-[#141414] group">
+                <img src={photo} alt={`Foto libre ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <div className="absolute bottom-0 inset-x-0 bg-black/80 p-1 text-[9px] text-[#15803D] flex items-center justify-between">
+                  <span>Evidencia #{i + 1}</span>
+                  <Check className="w-3 h-3 text-[#15803D]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: Producer Stock & Harvest Management (ONLY FOR PRODUCER OWNER) */}
+      {activeTab === 'STOCK_MANAGEMENT' && isOwner && (
+        <div className="space-y-5 py-3 font-mono text-xs">
+          {/* Action 1: Add more harvest (Produciendo más) */}
+          <div className="bg-[#141414] border-2 border-[#15803D] p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sprout className="w-4 h-4 text-[#15803D]" />
+              <h4 className="font-display font-black text-sm text-[#E5E5E5] uppercase">
+                Añadir Más Cosecha al Lote ("Se están produciendo más")
+              </h4>
+            </div>
+            <p className="text-[11px] text-[#9E9E9E] font-sans">
+              Si tu plantación continúa cortando racimos o ampliaste la recolección, suma los kilos cosechados al lote existente.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative flex-1 w-full">
+                <Input
+                  type="number"
+                  min="50"
+                  step="50"
+                  value={additionalHarvestKg}
+                  onChange={(e) => setAdditionalHarvestKg(Number(e.target.value))}
+                  placeholder="Kilos adicionales a sumar (Ej. 500)"
+                  className="font-mono text-xs border-[#1E293B]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  onClick={() => setAdditionalHarvestKg(500)}
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px]"
+                >
+                  +500 Kg
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setAdditionalHarvestKg(1000)}
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px]"
+                >
+                  +1,000 Kg
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleAddMoreHarvest}
+                  variant="default"
+                  size="sm"
+                  className="w-full sm:w-auto flex items-center gap-1 font-bold text-xs"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Sumar Cosecha</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Action 2: Change Status and Edit Remaining Stock */}
+          <div className="bg-[#141414] border-2 border-[#FACC15] p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#FACC15]" />
+              <h4 className="font-display font-black text-sm text-[#E5E5E5] uppercase">
+                Ajustar Stock Disponible & Estado del Lote
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] uppercase text-[#9E9E9E] mb-1 font-bold">
+                  Stock Disponible Actual (Kg):
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editAvailableKg}
+                  onChange={(e) => setEditAvailableKg(Math.max(0, Number(e.target.value)))}
+                  className="font-mono text-xs border-[#1E293B]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase text-[#9E9E9E] mb-1 font-bold">
+                  Estado Público del Lote:
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="w-full bg-[#0A0A0A] border border-[#1E293B] text-[#E5E5E5] text-xs font-mono p-2 focus:border-[#15803D] focus:outline-none"
+                >
+                  <option value="available">🟢 Disponible / En Venta</option>
+                  <option value="in_production">🟡 En Producción / Próxima Cosecha</option>
+                  <option value="sold_out">🔴 Agotado / Cosecha Terminada</option>
+                  <option value="reserved">🔒 Lote Reservado</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button
+                onClick={handleSaveStock}
+                variant="yellow"
+                size="sm"
+                className="flex items-center gap-1.5 font-bold"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Guardar Ajustes de Inventario</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#1E293B] font-mono">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          className="text-xs"
+        >
+          Cerrar
+        </Button>
+
+        <div className="flex items-center gap-2">
+          {onRequestSample && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                onRequestSample(batch);
+                onClose();
+              }}
+              className="text-xs border-[#FACC15] text-[#FACC15] hover:bg-[#FACC15] hover:text-black"
+            >
+              Pedir Muestra (18 kg)
+            </Button>
+          )}
+
+          {onOpenEscrowCheckout && (
+            <Button
+              variant="default"
+              onClick={() => {
+                onOpenEscrowCheckout(batch);
+                onClose();
+              }}
+              disabled={batch.availableKg <= 0 || batch.status === 'sold_out'}
+              className="text-xs flex items-center gap-1.5"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>{batch.availableKg > 0 ? 'Comprar con Escrow' : 'Lote Agotado'}</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Direct Message with Producer Modal */}
+      <DirectMessageModal
+        isOpen={isDirectChatOpen}
+        onClose={() => setIsDirectChatOpen(false)}
+        contact={batch ? {
+          id: batch.farmId || batch.id,
+          name: batch.producerName,
+          corregimiento: batch.corregimiento,
+          reputation: batch.producerReputation || 99.4
+        } : null}
+        initialMessage={`Hola ${batch.producerName}, tengo una consulta sobre el lote ${batch.batchCode} (${batch.cropName}).`}
+      />
+    </Dialog>
+  );
+};

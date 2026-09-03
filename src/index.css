@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 90%;
+    --primary: 142 71% 29%;
+    --primary-foreground: 0 0% 4%;
+    --border: 142 71% 29%;
+    --purple: 263 84% 58%;
+    --yellow: 48 96% 53%;
+    --orange: 25 95% 53%;
+  }
+
+  * {
+    border-color: #15803D;
+  }
+
+  body {
+    background-color: #0A0A0A;
+    color: #E5E5E5;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(21, 128, 61, 0.08) 0%, transparent 60%),
+      radial-gradient(circle at 100% 100%, rgba(124, 58, 237, 0.05) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', 'Anton', sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom Brutalist Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+  border-left: 1px solid #15803D;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #15803D;
+  border: 1px solid #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7C3AED;
+}
+
+/* Agrotech Depth & Glow Utilities */
+.bg-grid-tech {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(21, 128, 61, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(21, 128, 61, 0.07) 1px, transparent 1px);
+}
+
+.glow-agrotech-green {
+  box-shadow: 0 0 15px rgba(21, 128, 61, 0.35);
+}
+
+.glow-agrotech-gold {
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.35);
+}
+
+.glow-agrotech-purple {
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.35);
+}
+
+.surface-agrotech {
+  background: linear-gradient(180deg, #111811 0%, #0B0E0B 100%);
+  border: 1px solid rgba(21, 128, 61, 0.4);
+}
+
+.surface-agrotech-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.surface-agrotech-hover:hover {
+  border-color: #15803D;
+  box-shadow: 0 0 20px rgba(21, 128, 61, 0.2);
+  transform: translateY(-2px);
+}
