@@ -34,11 +34,11 @@ export const ReeferLogisticsCalculator: React.FC = () => {
   const totalFOBValueUSD = totalFruitValueUSD + customsFeeUSD;
 
   return (
-    <div className="bg-[#0E0E0E] border-2 border-[#15803D] p-6 shadow-[6px_6px_0px_0px_#15803D] space-y-6 font-mono">
+    <div className="bg-[#0E0E0E] border-2 border-[#15803D] p-4 sm:p-6 shadow-[6px_6px_0px_0px_#15803D] space-y-6 font-mono">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E293B] pb-4 gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="live-yellow">LOGÍSTICA DE EXPORTACIÓN REEFER</Badge>
             <Badge variant="outline">PUERTO ARMUELLES // FOB</Badge>
           </div>
@@ -54,7 +54,7 @@ export const ReeferLogisticsCalculator: React.FC = () => {
 
         <div className="flex items-center gap-2 bg-[#141414] border border-[#15803D] px-3 py-1.5 self-start text-xs">
           <Thermometer className="w-4 h-4 text-[#15803D]" />
-          <span className="text-[#E5E5E5] font-bold">13.5°C / 56.3°F Cadena de Frío</span>
+          <span className="text-[#E5E5E5] font-bold">13.5 °C / 56.3°F Cadena de Frío</span>
         </div>
       </div>
 
@@ -111,34 +111,34 @@ export const ReeferLogisticsCalculator: React.FC = () => {
       </div>
 
       {/* Real-time Calculation Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-        <div className="bg-[#141414] border-2 border-[#15803D] p-4 shadow-[3px_3px_0px_0px_#15803D]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-center">
+        <div className="bg-[#141414] border-2 border-[#15803D] p-3 sm:p-4 shadow-[3px_3px_0px_0px_#15803D] min-w-0">
           <div className="text-[10px] text-[#666666] uppercase font-bold">Peso Neto Fruta</div>
-          <div className="text-2xl font-display font-black text-[#15803D] mt-1">
+          <div className="text-xl sm:text-2xl font-display font-black text-[#15803D] mt-1 break-words">
             {(totalKg / 1000).toFixed(2)} Ton
           </div>
           <div className="text-[9px] text-[#9E9E9E]">{totalKg.toLocaleString()} Kilogramos</div>
         </div>
 
-        <div className="bg-[#141414] border-2 border-[#FACC15] p-4 shadow-[3px_3px_0px_0px_#FACC15]">
+        <div className="bg-[#141414] border-2 border-[#FACC15] p-3 sm:p-4 shadow-[3px_3px_0px_0px_#FACC15] min-w-0">
           <div className="text-[10px] text-[#666666] uppercase font-bold">Pallets Requeridos</div>
-          <div className="text-2xl font-display font-black text-[#FACC15] mt-1">
+          <div className="text-xl sm:text-2xl font-display font-black text-[#FACC15] mt-1 break-words">
             {palletsCount}
           </div>
           <div className="text-[9px] text-[#9E9E9E]">54 cajas por pallet estándar</div>
         </div>
 
-        <div className="bg-[#141414] border-2 border-[#7C3AED] p-4 shadow-[3px_3px_0px_0px_#7C3AED]">
+        <div className="bg-[#141414] border-2 border-[#7C3AED] p-3 sm:p-4 shadow-[3px_3px_0px_0px_#7C3AED] min-w-0">
           <div className="text-[10px] text-[#666666] uppercase font-bold">Contenedores Reefer</div>
-          <div className="text-2xl font-display font-black text-[#7C3AED] mt-1">
+          <div className="text-xl sm:text-2xl font-display font-black text-[#7C3AED] mt-1 break-words">
             {reeferContainers}
           </div>
           <div className="text-[9px] text-[#9E9E9E]">Reefer 40ft High Cube</div>
         </div>
 
-        <div className="bg-[#141414] border-2 border-[#15803D] p-4 shadow-[3px_3px_0px_0px_#15803D]">
+        <div className="bg-[#141414] border-2 border-[#15803D] p-3 sm:p-4 shadow-[3px_3px_0px_0px_#15803D] min-w-0">
           <div className="text-[10px] text-[#666666] uppercase font-bold">Valor FOB Total</div>
-          <div className="text-2xl font-display font-black text-[#15803D] mt-1">
+          <div className="text-xl sm:text-2xl font-display font-black text-[#15803D] mt-1 break-words">
             ${totalFOBValueUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[9px] text-[#15803D]">En Custodia Escrow 100%</div>
@@ -153,7 +153,7 @@ export const ReeferLogisticsCalculator: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-[#CCCCCC] font-sans">
           <div>• Registro de marchamo inmutable en el pasaporte digital.</div>
-          <div>• Monitoreo de pulpa a 13.5°C antes de encajonar.</div>
+          <div>• Monitoreo de pulpa a 13.5 °C antes de encajonar.</div>
           <div>• Desembolso Escrow liberado al recibir el BL marítimo.</div>
         </div>
       </div>

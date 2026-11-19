@@ -60,7 +60,7 @@ export const BARU_MICROCLIMATES: Record<BaruCorregimiento, WeatherTelemetry> = {
 
 /**
  * Calculates biological risk of Black Sigatoka (Mycosphaerella fijiensis) in Bananas
- * Critical conditions: Temp 26-30°C, Humidity > 85%, Leaf wetness > 6 hours
+ * Critical conditions: Temp 26-30 °C, Humidity > 85%, Leaf wetness > 6 hours
  */
 export function calculateSigatokaRisk(weather: WeatherTelemetry): {
   riskScore: number;
@@ -72,7 +72,7 @@ export function calculateSigatokaRisk(weather: WeatherTelemetry): {
 
   if (weather.temperatureC >= 25 && weather.temperatureC <= 31) {
     score += 35;
-    reasons.push(`Temperatura óptima de esporulación (${weather.temperatureC}°C)`);
+    reasons.push(`Temperatura óptima de esporulación (${weather.temperatureC} °C)`);
   }
   if (weather.humidityPct >= 85) {
     score += 35;

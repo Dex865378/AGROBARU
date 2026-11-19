@@ -30,6 +30,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DirectMessageModal, ChatContact } from '@/components/chat/DirectMessageModal';
+import { SafeImage } from '@/components/ui/SafeImage';
+import { BUNDLED_CROP_IMAGES, createInitialsAvatarDataUri } from '@/lib/imageFallbacks';
 
 interface CommunityMessage {
   id: string;
@@ -79,14 +81,14 @@ export const CommunityAndAlerts: React.FC = () => {
       name: 'Bananeros de Barú & Exportación',
       corregimiento: 'Puerto Armuelles',
       description: 'Grupo oficial de productores de Banano Cavendish y Plátano Curaré para alertas fitosanitarias y fletes.',
-      icon: '🍌',
+      icon: 'BN',
       adminId: 'USR-FARMER-01',
       adminName: 'Don Dionisio Castillo',
       membersCount: 48,
       temporalMessagesDuration: 'OFF',
       pendingRequests: [
-        { id: 'REQ-01', name: 'Rodrigo A. Quintero', corregimiento: 'Progreso', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100' },
-        { id: 'REQ-02', name: 'Alfonso De Gracia', corregimiento: 'Baco', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100' }
+        { id: 'REQ-01', name: 'Rodrigo A. Quintero', corregimiento: 'Progreso', avatar: createInitialsAvatarDataUri('Rodrigo A. Quintero') },
+        { id: 'REQ-02', name: 'Alfonso De Gracia', corregimiento: 'Baco', avatar: createInitialsAvatarDataUri('Alfonso De Gracia') }
       ]
     },
     {
@@ -94,7 +96,7 @@ export const CommunityAndAlerts: React.FC = () => {
       name: 'Monitoreo Sigatoka & Bioinsumos',
       corregimiento: 'Distrito de Barú',
       description: 'Red de aviso temprano de brotes fungosos y coordinación de bio-fungicidas preventivos con MIDA.',
-      icon: '🔬',
+      icon: 'SG',
       adminId: 'USR-COOP-01',
       adminName: 'Ing. Marlenys Araúz (MIDA)',
       membersCount: 86,
@@ -106,13 +108,13 @@ export const CommunityAndAlerts: React.FC = () => {
       name: 'Cacaoteros & Frutas Finas de Limones',
       corregimiento: 'Limones',
       description: 'Productores de Cacao Criollo Fino y Frutas tropicales de la península de Burica.',
-      icon: '🍫',
+      icon: 'CC',
       adminId: 'USR-FARMER-02',
       adminName: 'Doña Carmen Rosa Morales',
       membersCount: 32,
       temporalMessagesDuration: '7D',
       pendingRequests: [
-        { id: 'REQ-03', name: 'Silvia Montezuma', corregimiento: 'Limones', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }
+        { id: 'REQ-03', name: 'Silvia Montezuma', corregimiento: 'Limones', avatar: createInitialsAvatarDataUri('Silvia Montezuma') }
       ]
     }
   ]);
@@ -128,7 +130,7 @@ export const CommunityAndAlerts: React.FC = () => {
         senderId: 'USR-FARMER-01',
         senderName: 'Don Dionisio Castillo',
         senderUsername: '@dionisio_castillo',
-        senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        senderAvatar: createInitialsAvatarDataUri('Don Dionisio Castillo'),
         roleBadge: 'Admin • Finca Santa Clara',
         text: 'Buenas tardes compañeros. En el sector de Manaca y Baco hemos completado el embolse de 1,200 racimos con cinta azul. El calibre viene excelente para el corte de la próxima semana.',
         timestamp: '10:14 AM',
@@ -139,7 +141,7 @@ export const CommunityAndAlerts: React.FC = () => {
         senderId: 'USR-FARMER-05',
         senderName: 'Marcelino Vega',
         senderUsername: '@marcelino_vega',
-        senderAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
+        senderAvatar: createInitialsAvatarDataUri('Marcelino Vega'),
         roleBadge: 'Productor Progreso',
         text: 'Excelente @dionisio_castillo. ¿Alguien tiene camión refrigerado disponible para el jueves hacia muelle?',
         timestamp: '10:28 AM',
@@ -154,10 +156,10 @@ export const CommunityAndAlerts: React.FC = () => {
         senderId: 'USR-COOP-01',
         senderName: 'Ing. Marlenys Araúz',
         senderUsername: '@mida_chiriqui',
-        senderAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100',
+        senderAvatar: createInitialsAvatarDataUri('Marlenys Arauz'),
         roleBadge: 'MIDA Chiriquí',
         text: 'Aviso a todos los agremiados: la estación meteorológica de Barú registró 92% de humedad esta madrugada. Favor verificar drenajes y aplicar caldo bordelés o bioinsumo Bacillus.',
-        imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
+        imageUrl: BUNDLED_CROP_IMAGES.banana,
         timestamp: '11:05 AM',
         likes: 8
       }
@@ -185,7 +187,7 @@ export const CommunityAndAlerts: React.FC = () => {
       senderId: currentUser.id,
       senderName: currentUser.name,
       senderUsername: currentUser.username || `@${currentUser.name.toLowerCase().replace(/\s+/g, '_')}`,
-      senderAvatar: currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+      senderAvatar: currentUser.photoURL || createInitialsAvatarDataUri(currentUser.name),
       roleBadge: currentUser.role === 'farmer' ? 'Productor Barú' : currentUser.role === 'buyer' ? 'Comprador' : 'Inspector MIDA',
       text: inputText.trim(),
       imageUrl: attachedImage || undefined,
@@ -275,7 +277,7 @@ export const CommunityAndAlerts: React.FC = () => {
             <Badge variant="live-green" pulse>BARÚ CONECTADO</Badge>
             <Badge variant="outline">MIDA & PRODUCTORES</Badge>
           </div>
-          <h2 className="font-display font-black text-2xl text-[#E5E5E5] uppercase tracking-tight mt-1">
+          <h2 className="font-display font-bold text-2xl text-[#E5E5E5] uppercase tracking-normal leading-snug mt-1">
             Centro de Alertas Fitosanitarias & Comunidad Agrícola
           </h2>
           <p className="text-xs text-[#9E9E9E] font-sans">
@@ -285,37 +287,37 @@ export const CommunityAndAlerts: React.FC = () => {
       </div>
 
       {/* TOP VIEW SWITCHER: ALERTS (DEFAULT) vs COMMUNITY */}
-      <div className="bg-[#0E0E0E] border-2 border-[#15803D] p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[4px_4px_0px_0px_#15803D]">
+      <div className="bg-[#111714] border border-[#1E2E26] rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="text-xs text-[#9E9E9E] font-bold uppercase pl-2">
             Seleccionar Vista:
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+        <div className="flex flex-wrap gap-2 sm:items-center">
           <button
             type="button"
             onClick={() => setActiveSection('ALERTS')}
-            className={`px-4 py-2 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 sm:flex-initial min-w-[140px] px-4 py-2 rounded-lg text-xs font-bold uppercase leading-snug transition-all flex items-center justify-center gap-2 ${
               activeSection === 'ALERTS'
-                ? 'bg-[#15803D] text-black border-2 border-[#15803D] shadow-[2px_2px_0px_0px_#FACC15]'
-                : 'bg-[#141414] text-[#9E9E9E] border-2 border-[#1E293B] hover:text-[#E5E5E5]'
+                ? 'bg-[#10B981] text-[#05100A] border border-[#10B981]'
+                : 'bg-[#090D0B] text-[#9E9E9E] border border-[#1E2E26] hover:text-[#E5E5E5]'
             }`}
           >
-            <Bug className="w-4 h-4" />
+            <Bug className="w-4 h-4 shrink-0" />
             <span>Alertas Fitosanitarias</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSection('COMMUNITY')}
-            className={`px-4 py-2 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 sm:flex-initial min-w-[140px] px-4 py-2 rounded-lg text-xs font-bold uppercase leading-snug transition-all flex items-center justify-center gap-2 ${
               activeSection === 'COMMUNITY'
-                ? 'bg-[#FACC15] text-black border-2 border-[#FACC15] shadow-[2px_2px_0px_0px_#15803D]'
-                : 'bg-[#141414] text-[#9E9E9E] border-2 border-[#1E293B] hover:text-[#E5E5E5]'
+                ? 'bg-[#FACC15] text-[#05100A] border border-[#FACC15]'
+                : 'bg-[#090D0B] text-[#9E9E9E] border border-[#1E2E26] hover:text-[#E5E5E5]'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 shrink-0" />
             <span>Comunidad</span>
           </button>
         </div>
@@ -324,7 +326,7 @@ export const CommunityAndAlerts: React.FC = () => {
       {/* VIEW 1: RADAR & ALERTAS FITOSANITARIAS (FULL WIDTH - DEFAULT) */}
       {activeSection === 'ALERTS' && (
         <div className="space-y-4 animate-fadeIn">
-          <div className="bg-[#0E0E0E] border-2 border-[#15803D] p-6 shadow-[6px_6px_0px_0px_#15803D]">
+          <div className="bg-[#111714] border border-[#1E2E26] rounded-xl p-6 shadow-sm">
             <PestAlertEngine />
           </div>
         </div>
@@ -332,20 +334,20 @@ export const CommunityAndAlerts: React.FC = () => {
 
       {/* VIEW 2: WHATSAPP-STYLE MANAGED COMMUNITY (FULL WIDTH) */}
       {activeSection === 'COMMUNITY' && (
-        <div className="bg-[#0E0E0E] border-2 border-[#15803D] shadow-[6px_6px_0px_0px_#15803D] flex flex-col h-[750px] animate-fadeIn">
+        <div className="bg-[#111714] border border-[#1E2E26] rounded-xl overflow-hidden shadow-md flex flex-col min-h-[540px] max-h-[82vh] h-[640px] animate-fadeIn">
           {/* Group Header & Admin Controls */}
-          <div className="bg-[#141414] border-b border-[#1E293B] p-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="bg-[#141414] border-b border-[#1E293B] p-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="w-8 h-8 rounded-none bg-[#15803D]/20 border border-[#15803D] flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-4 h-4 text-[#15803D]" />
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-display font-black text-sm text-[#E5E5E5] truncate uppercase">
                     {activeGroup.name}
                   </h3>
                   {activeGroup.temporalMessagesDuration !== 'OFF' && (
-                    <Badge variant="yellow" className="text-[8px] py-0 px-1 flex items-center gap-0.5">
+                    <Badge variant="yellow" className="text-[8px] py-0 px-1 flex items-center gap-0.5 shrink-0">
                       <Timer className="w-2.5 h-2.5" />
                       {activeGroup.temporalMessagesDuration}
                     </Badge>
@@ -453,7 +455,7 @@ export const CommunityAndAlerts: React.FC = () => {
                         className="bg-[#0A0A0A] p-2 border border-[#1E293B] flex items-center justify-between gap-2"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <img src={req.avatar} alt={req.name} className="w-6 h-6 object-cover border border-[#15803D]" />
+                          <SafeImage src={req.avatar} alt={req.name} fallbackType="avatar" nameHint={req.name} className="w-6 h-6 object-cover border border-[#15803D] shrink-0" />
                           <div className="min-w-0">
                             <div className="font-bold text-[#E5E5E5] text-[11px] truncate">{req.name}</div>
                             <div className="text-[9px] text-[#9E9E9E]">{req.corregimiento}, Barú</div>
@@ -512,12 +514,14 @@ export const CommunityAndAlerts: React.FC = () => {
                 )}
 
                 {/* Message Header */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <img 
-                      src={msg.senderAvatar} 
-                      alt={msg.senderName} 
-                      className="w-7 h-7 object-cover border border-[#15803D] cursor-pointer"
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <SafeImage
+                      src={msg.senderAvatar}
+                      alt={msg.senderName}
+                      fallbackType="avatar"
+                      nameHint={msg.senderName}
+                      className="w-7 h-7 object-cover border border-[#15803D] cursor-pointer shrink-0"
                       onClick={() => setSelectedChatContact({
                         id: msg.senderId,
                         name: msg.senderName,
@@ -525,9 +529,9 @@ export const CommunityAndAlerts: React.FC = () => {
                         avatar: msg.senderAvatar
                       })}
                     />
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span 
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
                           onClick={() => setSelectedChatContact({
                             id: msg.senderId,
                             name: msg.senderName,
@@ -544,7 +548,7 @@ export const CommunityAndAlerts: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className="text-[9px] text-[#666666]">{msg.timestamp}</span>
+                  <span className="text-[9px] text-[#666666] shrink-0">{msg.timestamp}</span>
                 </div>
 
                 {/* Message Body */}
@@ -555,12 +559,18 @@ export const CommunityAndAlerts: React.FC = () => {
                 {/* Attached Image */}
                 {msg.imageUrl && (
                   <div className="mt-2 border border-[#1E293B] overflow-hidden max-w-sm">
-                    <img src={msg.imageUrl} alt="Evidencia de campo" className="w-full h-auto object-cover" />
+                    <SafeImage
+                      src={msg.imageUrl}
+                      alt="Evidencia de campo"
+                      fallbackType="product"
+                      cropHint="banano"
+                      className="w-full h-auto object-cover"
+                    />
                   </div>
                 )}
 
                 {/* Message Actions: Reply, Like & DM */}
-                <div className="pt-2 border-t border-[#1E293B]/60 flex items-center justify-between text-[10px]">
+                <div className="pt-2 border-t border-[#1E293B]/60 flex flex-wrap items-center justify-between gap-2 text-[10px]">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleToggleLike(msg.id)}
@@ -623,7 +633,7 @@ export const CommunityAndAlerts: React.FC = () => {
           {attachedImage && (
             <div className="bg-[#141414] border-t border-[#15803D] p-2 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <img src={attachedImage} alt="Preview" className="w-8 h-8 object-cover border border-[#15803D]" />
+                <SafeImage src={attachedImage} alt="Preview" fallbackType="product" className="w-8 h-8 object-cover border border-[#15803D]" />
                 <span className="text-[10px] text-[#15803D]">Foto adjunta lista para enviar</span>
               </div>
               <button onClick={() => setAttachedImage(null)} className="text-[#F97316] hover:text-white">

@@ -19,7 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { verifyHashChain } from '@/services/cryptoService';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateOnly } from '@/lib/utils';
+import { getActivityTypeLabel } from '@/services/dateUtils';
 import { getBatchTraceUrl } from '@/lib/qrUtils';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton } from '@/components/ui/dialog';
 
@@ -75,7 +76,7 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-[#15803D] pb-4">
         <div>
-          <h2 className="font-display font-black text-2xl text-[#E5E5E5] uppercase tracking-tight">
+          <h2 className="font-display font-bold text-2xl text-[#E5E5E5] uppercase tracking-normal leading-snug">
             Verificador Criptográfico & Auditoría QR
           </h2>
           <p className="text-xs text-[#9E9E9E] font-sans">
@@ -129,13 +130,13 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
                 setInputCode(b.batchCode);
                 handleSearch(b.batchCode);
               }}
-              className={`px-2.5 py-1 border text-[11px] transition-colors ${
+              className={`px-2.5 py-1 border text-[11px] whitespace-nowrap transition-colors ${
                 selectedBatch?.id === b.id
                   ? 'border-[#15803D] bg-[#15803D] text-black font-bold'
                   : 'border-[#1E293B] bg-[#0E0E0E] text-[#9E9E9E] hover:border-[#15803D] hover:text-[#E5E5E5]'
               }`}
             >
-              {b.cropName} ({b.batchCode})
+              {b.cropName} ({b.batchCode.replace('AGRO-BARU-2026-', '')})
             </button>
           ))}
         </div>
@@ -195,7 +196,7 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
               <div className="w-full text-left font-mono text-[11px] space-y-1.5 text-[#9E9E9E] border-t border-[#1E293B] pt-3">
                 <div>
                   <span className="text-[#666666]">Raíz Merkle:</span>
-                  <div className="text-[#7C3AED] truncate font-bold">{selectedBatch.rootMerkleHash}</div>
+                  <div className="text-[#7C3AED] break-all font-bold">{selectedBatch.rootMerkleHash}</div>
                 </div>
                 <div>
                   <span className="text-[#666666]">Coordenadas Finca:</span>
@@ -206,23 +207,23 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
 
             {/* Product & Farm Detailed Data */}
             <div className="lg:col-span-2 bg-[#121212] border-2 border-[#15803D] p-6 space-y-5 shadow-[4px_4px_0px_0px_#15803D]">
-              <div className="flex items-start justify-between border-b border-[#15803D]/40 pb-4">
-                <div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 bg-[#15803D]/15 text-[#15803D] border border-[#15803D]/30 font-bold uppercase">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#15803D]/40 pb-4">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-mono px-2 py-0.5 bg-[#15803D]/15 text-[#15803D] border border-[#15803D]/30 font-bold uppercase inline-block">
                     {selectedBatch.qualityGrade}
                   </span>
-                  <h3 className="font-display font-black text-2xl text-[#E5E5E5] uppercase mt-1">
+                  <h3 className="font-display font-black text-2xl text-[#E5E5E5] uppercase mt-1 break-words">
                     {selectedBatch.cropName}
                   </h3>
                   <div className="text-xs font-mono text-[#9E9E9E]">
-                    Variedad: <strong className="text-[#E5E5E5]">{selectedBatch.variety}</strong> • Cosecha: {selectedBatch.harvestDate}
+                    Variedad: <strong className="text-[#E5E5E5]">{selectedBatch.variety}</strong> • Cosecha: {formatDateOnly(selectedBatch.harvestDate)}
                   </div>
                 </div>
 
-                <div className="text-right font-mono">
+                <div className="text-left sm:text-right font-mono shrink-0">
                   <div className="text-xs text-[#9E9E9E]">VOLUMEN DEL LOTE</div>
                   <div className="font-display font-bold text-xl text-[#15803D]">
-                    {selectedBatch.quantityKg} Kg
+                    {selectedBatch.quantityKg.toLocaleString('es-PA')} Kg
                   </div>
                 </div>
               </div>
@@ -234,18 +235,18 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
               {/* Farm metadata box */}
               {activeFarm && (
                 <div className="bg-[#0E0E0E] border border-[#1E293B] p-4 space-y-2 text-xs font-mono">
-                  <div className="flex items-center justify-between text-[#E5E5E5]">
-                    <span className="font-bold flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-[#15803D]" strokeWidth={1.5} />
-                      {activeFarm.name}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[#E5E5E5]">
+                    <span className="font-bold flex items-center gap-1.5 min-w-0">
+                      <MapPin className="w-4 h-4 text-[#15803D] shrink-0" strokeWidth={1.5} />
+                      <span className="break-words">{activeFarm.name}</span>
                     </span>
-                    <span className="text-[#FACC15] font-bold">{activeFarm.corregimiento}, Barú</span>
+                    <span className="text-[#FACC15] font-bold shrink-0">{activeFarm.corregimiento}, Barú</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[#9E9E9E] text-[11px] pt-1 border-t border-[#1A1A1A]">
                     <div>Titular: <strong className="text-[#E5E5E5]">{activeFarm.ownerName}</strong></div>
                     <div>Registro MIDA: <strong className="text-[#E5E5E5]">{activeFarm.registrationNumber}</strong></div>
                     <div>Área Finca: <strong className="text-[#E5E5E5]">{activeFarm.areaHectares} Ha</strong></div>
-                    <div>Fecha Registro: <strong className="text-[#E5E5E5]">{activeFarm.registeredDate}</strong></div>
+                    <div>Fecha Registro: <strong className="text-[#E5E5E5]">{formatDateOnly(activeFarm.registeredDate)}</strong></div>
                   </div>
                 </div>
               )}
@@ -271,14 +272,14 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
 
           {/* Detailed Cryptographic Audit Timeline */}
           <div className="bg-[#121212] border-2 border-[#15803D] p-6 space-y-4 shadow-[4px_4px_0px_0px_#15803D]">
-            <div className="flex items-center justify-between border-b border-[#15803D]/40 pb-3">
-              <div className="flex items-center gap-2">
-                <Hash className="w-5 h-5 text-[#7C3AED]" strokeWidth={1.5} />
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#15803D]/40 pb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Hash className="w-5 h-5 text-[#7C3AED] shrink-0" strokeWidth={1.5} />
                 <h4 className="font-display font-bold text-base text-[#E5E5E5] uppercase tracking-wide">
                   Historial de Cadena de Custodia del Lote ({batchLogs.length} Bloques)
                 </h4>
               </div>
-              <span className="text-[11px] font-mono text-[#15803D] font-bold">
+              <span className="text-[11px] font-mono text-[#15803D] font-bold shrink-0">
                 CADENA INMUTABLE SELLADA
               </span>
             </div>
@@ -295,7 +296,7 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
                         BLOQUE #{index + 1}
                       </span>
                       <span className="text-[#E5E5E5] font-bold uppercase">
-                        {log.activityType.replace('_', ' ')}
+                        {getActivityTypeLabel(log.activityType)}
                       </span>
                     </div>
                     <span className="text-[#9E9E9E] flex items-center gap-1 text-[11px]">
@@ -315,14 +316,14 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
                     </div>
                   )}
 
-                  <div className="bg-[#0A0A0A] p-2.5 border border-[#1A1A1A] text-[10px] space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-[#666666]">HASH PREVIO:</span>
-                      <span className="text-[#9E9E9E] truncate max-w-[280px]">{log.previousHash}</span>
+                  <div className="bg-[#0A0A0A] p-2.5 border border-[#1A1A1A] text-[10px] space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                      <span className="text-[#666666] shrink-0">HASH PREVIO:</span>
+                      <span className="text-[#9E9E9E] break-all min-w-0">{log.previousHash}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#7C3AED] font-bold">HASH BLOQUE (SHA-256):</span>
-                      <span className="text-[#15803D] truncate max-w-[280px] font-bold">{log.cryptoHash}</span>
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                      <span className="text-[#7C3AED] font-bold shrink-0">HASH BLOQUE (SHA-256):</span>
+                      <span className="text-[#15803D] break-all min-w-0 font-bold">{log.cryptoHash}</span>
                     </div>
                   </div>
                 </div>
@@ -365,29 +366,29 @@ export const QRScannerViewer: React.FC<{ initialBatchCode?: string }> = ({
             </div>
 
             <div className="bg-[#121212] border-2 border-[#1E293B] p-4 text-left text-xs space-y-2 text-[#9E9E9E]">
-              <div className="flex justify-between">
-                <span>Producto Certificado:</span>
-                <strong className="text-[#E5E5E5]">{selectedBatch.cropName} ({selectedBatch.variety})</strong>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                <span className="shrink-0">Producto Certificado:</span>
+                <strong className="text-[#E5E5E5] sm:text-right">{selectedBatch.cropName} ({selectedBatch.variety})</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Finca de Producción:</span>
-                <strong className="text-[#E5E5E5]">{selectedBatch.farmName} ({selectedBatch.corregimiento})</strong>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                <span className="shrink-0">Finca de Producción:</span>
+                <strong className="text-[#E5E5E5] sm:text-right">{selectedBatch.farmName} ({selectedBatch.corregimiento})</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Productor Titular:</span>
-                <strong className="text-[#E5E5E5]">{selectedBatch.producerName}</strong>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                <span className="shrink-0">Productor Titular:</span>
+                <strong className="text-[#E5E5E5] sm:text-right">{selectedBatch.producerName}</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Código de Lote:</span>
-                <strong className="text-[#15803D]">{selectedBatch.batchCode}</strong>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                <span className="shrink-0">Código de Lote:</span>
+                <strong className="text-[#15803D] sm:text-right">{selectedBatch.batchCode}</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Raíz Merkle SHA-256:</span>
-                <strong className="text-[#7C3AED] truncate max-w-[220px]">{selectedBatch.rootMerkleHash}</strong>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                <span className="shrink-0">Raíz Merkle SHA-256:</span>
+                <strong className="text-[#7C3AED] break-all min-w-0 sm:max-w-[240px] sm:text-right">{selectedBatch.rootMerkleHash}</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Total Bloques Auditados:</span>
-                <strong className="text-[#E5E5E5]">{selectedBatch.totalLogsCount} Registros Inmutables</strong>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                <span className="shrink-0">Total Bloques Auditados:</span>
+                <strong className="text-[#E5E5E5] sm:text-right">{selectedBatch.totalLogsCount} Registros Inmutables</strong>
               </div>
             </div>
 

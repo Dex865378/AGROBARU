@@ -48,7 +48,7 @@ export const AntiIntermediaryCalculator: React.FC = () => {
         <p className="text-xs text-[#9E9E9E] font-mono">
           {language === 'en' 
             ? 'Compare your net profit by selling directly via AgroBarú Escrow vs traditional field middlemen in Barú.'
-            : 'Compara tu ingreso real vendiendo directo con custodia Escrow vs el precio impuesto por intermediarios en Barú.'}
+            : 'Compara tu ingreso real vendiendo directo con custodia Escrow vs. el precio impuesto por intermediarios en Barú.'}
         </p>
       </CardHeader>
 
@@ -57,7 +57,7 @@ export const AntiIntermediaryCalculator: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#0E0E0E] p-4 border border-[#1E293B]">
           {/* Hectares Slider */}
           <div>
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
               <label className="text-[11px] uppercase text-[#CCCCCC] font-bold">
                 {language === 'en' ? 'Cultivated Hectares (Barú):' : 'Hectáreas Sembradas (Barú):'}
               </label>
@@ -80,7 +80,7 @@ export const AntiIntermediaryCalculator: React.FC = () => {
 
           {/* Boxes per Hectare Slider */}
           <div>
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
               <label className="text-[11px] uppercase text-[#CCCCCC] font-bold">
                 {language === 'en' ? 'Weekly Yield (Boxes / ha):' : 'Rendimiento Semanal (Cajas / ha):'}
               </label>
@@ -105,12 +105,12 @@ export const AntiIntermediaryCalculator: React.FC = () => {
         {/* Comparison Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Traditional Intermediary Card */}
-          <div className="bg-[#141414] border-2 border-[#F97316] p-4 relative">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-[#141414] border-2 border-[#F97316] p-4 relative min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <span className="text-[10px] uppercase font-bold text-[#F97316]">
                 {language === 'en' ? 'Traditional Middleman / Coyote' : 'Intermediario Tradicional / Coyote'}
               </span>
-              <span className="text-xs text-[#F97316] font-bold">${COYOTE_PRICE_PER_BOX.toFixed(2)} / caja</span>
+              <span className="text-xs text-[#F97316] font-bold shrink-0">${COYOTE_PRICE_PER_BOX.toFixed(2)} / caja</span>
             </div>
             <div className="text-2xl font-display font-black text-[#CCCCCC]">
               ${coyoteWeeklyGross.toLocaleString('en-US', { maximumFractionDigits: 0 })} <span className="text-xs text-[#666666] font-normal">/ semana</span>
@@ -119,17 +119,17 @@ export const AntiIntermediaryCalculator: React.FC = () => {
               ${(coyoteWeeklyGross * 52).toLocaleString('en-US', { maximumFractionDigits: 0 })} al año
             </div>
             <div className="text-[10px] text-[#F97316] mt-3 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> Pago tardío, cheques sin fondo y castigo arbitrario por calibre.
+              <AlertCircle className="w-3 h-3 shrink-0" /> Pago tardío, cheques sin fondo y castigo arbitrario por calibre.
             </div>
           </div>
 
           {/* AgroBaru Direct Protocol Card */}
-          <div className="bg-[#0D1F12] border-2 border-[#15803D] p-4 relative shadow-[3px_3px_0px_0px_#15803D]">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-[#0D1F12] border-2 border-[#15803D] p-4 relative shadow-[3px_3px_0px_0px_#15803D] min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <span className="text-[10px] uppercase font-bold text-[#15803D]">
                 {language === 'en' ? 'AgroBarú Direct Escrow Protocol' : 'Protocolo Directo AgroBarú Escrow'}
               </span>
-              <span className="text-xs text-[#15803D] font-bold">${AGROBARU_EXPORT_PRICE.toFixed(2)} / caja</span>
+              <span className="text-xs text-[#15803D] font-bold shrink-0">${AGROBARU_EXPORT_PRICE.toFixed(2)} / caja</span>
             </div>
             <div className="text-2xl font-display font-black text-[#15803D]">
               ${agrobaruWeeklyGross.toLocaleString('en-US', { maximumFractionDigits: 0 })} <span className="text-xs text-[#15803D] font-normal">/ semana</span>
@@ -157,9 +157,9 @@ export const AntiIntermediaryCalculator: React.FC = () => {
             </div>
           </div>
 
-          <Button variant="default" className="whitespace-nowrap flex items-center gap-2">
+          <Button variant="default" className="flex items-center gap-2">
             <span>{language === 'en' ? 'Publish Batch in Escrow' : 'Publicar Lote en Escrow'}</span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 shrink-0" />
           </Button>
         </div>
       </CardContent>

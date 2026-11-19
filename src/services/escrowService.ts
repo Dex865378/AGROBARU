@@ -3,6 +3,17 @@ import { calculateSha256 } from './cryptoService';
 
 export const ESCROW_FEE_PERCENTAGE = 0.015; // 1.5% decentralized escrow operational fee
 
+/** Etiquetas legibles para los estados del contrato Escrow */
+export const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
+  CREATED: 'Contrato Creado',
+  FUNDED: 'Fondos en Custodia',
+  DISPATCHED: 'Despachado de Finca',
+  IN_TRANSIT: 'En Tránsito',
+  DELIVERED_PENDING_INSPECTION: 'Entregado, pendiente de inspección',
+  RELEASED: 'Fondos Liberados al Productor',
+  DISPUTED: 'En Disputa / Arbitraje',
+};
+
 /**
  * Generate a unique cryptographic escrow contract ID and hash
  */
@@ -45,7 +56,7 @@ export function canTransitionEscrowStatus(
  */
 export function generateColdChainLogs(): { time: string; tempC: number }[] {
   const logs = [];
-  const baseTemp = 13.5; // Ideal tropical fruit transport temp (13-14°C)
+  const baseTemp = 13.5; // Ideal tropical fruit transport temp (13-14 °C)
   const now = Date.now();
   for (let i = 6; i >= 0; i--) {
     const time = new Date(now - i * 3600 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

@@ -18,8 +18,10 @@ import {
   FarmerDirectoryProfile 
 } from '@/services/directoryData';
 import { useAppState } from '@/context/AppStateContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { DirectMessageModal, ChatContact } from '@/components/chat/DirectMessageModal';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 interface GlobalSearchBarProps {
   onNavigateToTab?: (tab: string) => void;
@@ -82,6 +84,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     setIsOpen(false);
   };
 
+  const { language } = useLanguage();
+
   return (
     <div ref={wrapperRef} className="relative w-full max-w-2xl mx-auto">
       {/* Search Input Box */}
@@ -95,7 +99,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder="Buscar empresas, marcas (ej. La Chiricana) o productores en Barú..."
+          placeholder={language === 'en' ? 'Search companies, brands (e.g. La Chiricana) or Barú producers...' : 'Buscar empresas, marcas (ej. La Chiricana) o productores en Barú...'}
           className="w-full bg-[#121212] border-2 border-[#1E293B] hover:border-[#15803D]/60 focus:border-[#15803D] text-[#E5E5E5] placeholder-[#666666] text-xs font-mono pl-9 pr-8 py-2 rounded-none transition-all outline-none shadow-inner"
         />
         {query && (
@@ -133,18 +137,20 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
               {matchedEnterprises.map((ent) => (
                 <div 
                   key={ent.id}
-                  className="p-2 hover:bg-[#161616] border border-transparent hover:border-[#1E293B] flex items-center justify-between gap-3 transition-colors"
+                  className="p-2 hover:bg-[#161616] border border-transparent hover:border-[#1E293B] flex flex-wrap items-center justify-between gap-2.5 transition-colors"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img 
-                      src={ent.avatar} 
-                      alt={ent.brandName} 
-                      className="w-8 h-8 rounded-none object-cover border border-[#15803D] shrink-0" 
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <SafeImage
+                      src={ent.avatar}
+                      alt={ent.brandName}
+                      fallbackType="avatar"
+                      nameHint={ent.brandName}
+                      className="w-8 h-8 rounded-none object-cover border border-[#15803D] shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="font-bold text-[#E5E5E5] flex items-center gap-1.5 truncate">
-                        <span>{ent.brandName}</span>
-                        <Badge variant="outline" className="text-[8px] py-0 px-1">{ent.category}</Badge>
+                      <div className="font-bold text-[#E5E5E5] flex flex-wrap items-center gap-1.5">
+                        <span className="truncate">{ent.brandName}</span>
+                        <Badge variant="outline" className="text-[8px] py-0 px-1 shrink-0">{ent.category}</Badge>
                       </div>
                       <div className="text-[10px] text-[#9E9E9E] truncate flex items-center gap-1">
                         <MapPin className="w-2.5 h-2.5 text-[#15803D]" />
@@ -161,7 +167,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                         corregimiento: ent.corregimiento,
                         avatar: ent.avatar,
                         phone: ent.phone,
-                        reputation: ent.rating * 20
+                        reputation: Math.round(ent.rating * 20 * 10) / 10
                       })}
                       className="px-2 py-1 bg-[#141414] hover:bg-[#15803D] hover:text-black border border-[#15803D] text-[10px] text-[#15803D] flex items-center gap-1 transition-all"
                     >
@@ -185,18 +191,20 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
               {matchedFarmers.map((farmer) => (
                 <div 
                   key={farmer.id}
-                  className="p-2 hover:bg-[#161616] border border-transparent hover:border-[#1E293B] flex items-center justify-between gap-3 transition-colors"
+                  className="p-2 hover:bg-[#161616] border border-transparent hover:border-[#1E293B] flex flex-wrap items-center justify-between gap-2.5 transition-colors"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img 
-                      src={farmer.avatar} 
-                      alt={farmer.name} 
-                      className="w-8 h-8 rounded-none object-cover border border-[#FACC15] shrink-0" 
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <SafeImage
+                      src={farmer.avatar}
+                      alt={farmer.name}
+                      fallbackType="avatar"
+                      nameHint={farmer.name}
+                      className="w-8 h-8 rounded-none object-cover border border-[#FACC15] shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="font-bold text-[#E5E5E5] flex items-center gap-1.5 truncate">
-                        <span>{farmer.name}</span>
-                        <span className="text-[9px] text-[#FACC15] font-mono">{farmer.username}</span>
+                      <div className="font-bold text-[#E5E5E5] flex flex-wrap items-center gap-1.5">
+                        <span className="truncate">{farmer.name}</span>
+                        <span className="text-[9px] text-[#FACC15] font-mono shrink-0">{farmer.username}</span>
                       </div>
                       <div className="text-[10px] text-[#9E9E9E] truncate flex items-center gap-1 font-sans">
                         <Sprout className="w-2.5 h-2.5 text-[#15803D]" />

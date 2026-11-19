@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { computeMerkleRoot } from '@/services/cryptoService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldCheck, 
@@ -230,7 +231,7 @@ const INITIAL_BLOCKS: CryptographicBlock[] = [
     activity: {
       category: 'CALIBRATED_HARVEST',
       title: 'Corte Calibrado de Exportación & Embalaje Térmico',
-      description: 'Cosecha a 11 semanas de floración. Inspección de calibre con pie de rey óptico. Lavado hidrotérmico con extracto cítrico y paletizado a 13.5°C.',
+      description: 'Cosecha a 11 semanas de floración. Inspección de calibre con pie de rey óptico. Lavado hidrotérmico con extracto cítrico y paletizado a 13.5 °C.',
       technicalSpecs: {
         crop: 'Banano Cavendish Exportación Directa',
         variety: 'Williams / Gran Enano',
@@ -263,6 +264,17 @@ const INITIAL_BLOCKS: CryptographicBlock[] = [
 
 export const CultivationBlockchain: React.FC = () => {
   const [blocks, setBlocks] = useState<CryptographicBlock[]>(INITIAL_BLOCKS);
+  const [merkleRoot, setMerkleRoot] = useState<string>('');
+
+  useEffect(() => {
+    let cancelled = false;
+    computeMerkleRoot(blocks.map((b) => b.blockHash)).then((root) => {
+      if (!cancelled) setMerkleRoot(root);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [blocks]);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [expandedBlockId, setExpandedBlockId] = useState<number | null>(null);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
@@ -379,18 +391,18 @@ export const CultivationBlockchain: React.FC = () => {
         <header className="border-2 border-[#15803D] bg-[#0E0E0E] p-6 shadow-[6px_6px_0px_0px_#15803D]">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#15803D] text-black font-mono font-bold text-xs uppercase tracking-wider">
-                  <Terminal className="w-3.5 h-3.5" strokeWidth={2} />
-                  PROTOCOLO CRIPTO-AGRO // MIDA CHIRIQUÍ
+                  <Terminal className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                  <span>PROTOCOLO CRIPTO-AGRO // MIDA CHIRIQUÍ</span>
                 </span>
                 <span className="text-xs font-mono text-[#FACC15] flex items-center gap-1">
-                  <Radio className="w-3.5 h-3.5 animate-pulse" strokeWidth={2} />
-                  GPS LOCK: BARÚ [8.2831°N, 82.8624°W]
+                  <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" strokeWidth={2} />
+                  <span>GPS LOCK: BARÚ [8.2831°N, 82.8624°W]</span>
                 </span>
               </div>
 
-              <h1 className="font-mono font-extrabold text-2xl sm:text-3xl text-[#E5E5E5] uppercase tracking-tight">
+              <h1 className="font-mono font-extrabold text-2xl sm:text-3xl text-[#E5E5E5] uppercase tracking-normal leading-snug">
                 Cadena de Bloques de Cultivo // <span className="text-[#15803D]">LOTE CAVENDISH #089</span>
               </h1>
 
@@ -403,7 +415,7 @@ export const CultivationBlockchain: React.FC = () => {
               <div className="bg-[#0A0A0A] border border-[#15803D]/60 p-3 font-mono text-xs space-y-1">
                 <div className="text-[10px] text-[#9E9E9E] uppercase">Raíz de Merkle del Lote:</div>
                 <div className="text-[#7C3AED] font-bold truncate max-w-[200px]">
-                  4b227777d4dd1fc61c6f884f48641d02b4d1...
+                  {merkleRoot ? `${merkleRoot.substring(0, 32)}...` : 'Calculando...'}
                 </div>
                 <div className="text-[10px] text-[#15803D] flex items-center gap-1 font-bold">
                   <ShieldCheck className="w-3 h-3" strokeWidth={2} /> 100% MATEMÁTICAMENTE VÁLIDO
@@ -436,7 +448,7 @@ export const CultivationBlockchain: React.FC = () => {
             </div>
             <div>
               <span className="text-[#666666] block text-[10px] uppercase">Cadena de Frío</span>
-              <span className="text-base font-bold text-[#15803D]">13.5°C Termo-Estable</span>
+              <span className="text-base font-bold text-[#15803D]">13.5 °C Termoestable</span>
             </div>
           </div>
         </header>
@@ -517,14 +529,14 @@ export const CultivationBlockchain: React.FC = () => {
                     </div>
 
                     {/* Timestamp & Altitude */}
-                    <div className="flex items-center gap-4 text-xs text-[#9E9E9E]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#9E9E9E]">
                       <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-[#FACC15]" strokeWidth={1.5} />
-                        {new Date(block.timestamp).toUTCString().replace('GMT', 'UTC')}
+                        <Calendar className="w-3.5 h-3.5 text-[#FACC15] shrink-0" strokeWidth={1.5} />
+                        <span>{new Date(block.timestamp).toUTCString().replace('GMT', 'UTC')}</span>
                       </span>
-                      <span className="text-[#666666]">|</span>
+                      <span className="text-[#666666] hidden sm:inline">|</span>
                       <span className="flex items-center gap-1 text-[#15803D]">
-                        <MapPin className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
                         ALT: {block.telemetry.altitudeMeters}m
                       </span>
                     </div>
@@ -571,21 +583,21 @@ export const CultivationBlockchain: React.FC = () => {
                   </div>
 
                   {/* Cryptographic Linkage Footer Strip */}
-                  <div className="bg-[#070707] border border-[#15803D]/40 p-3 space-y-1.5 font-mono text-[11px]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <span className="text-[#666666]">HASH ANTERIOR:</span>
-                      <span className="text-[#888888] truncate max-w-[420px]">{block.previousHash}</span>
+                  <div className="bg-[#070707] border border-[#15803D]/40 p-3 space-y-1.5 font-mono text-[11px] overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 min-w-0">
+                      <span className="text-[#666666] shrink-0">HASH ANTERIOR:</span>
+                      <span className="text-[#888888] truncate min-w-0 max-w-full sm:max-w-[420px]">{block.previousHash}</span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <span className="text-[#7C3AED] font-bold flex items-center gap-1">
-                        <Hash className="w-3.5 h-3.5" strokeWidth={2} /> HASH SHA-256 (BLOQUE #{block.blockNumber}):
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 min-w-0">
+                      <span className="text-[#7C3AED] font-bold flex items-center gap-1 shrink-0">
+                        <Hash className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> HASH SHA-256 (BLOQUE #{block.blockNumber}):
                       </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#15803D] font-bold truncate max-w-[380px]">{block.blockHash}</span>
+                      <div className="flex items-center gap-2 min-w-0 max-w-full">
+                        <span className="text-[#15803D] font-bold truncate min-w-0 max-w-full sm:max-w-[380px]">{block.blockHash}</span>
                         <button
                           onClick={() => handleCopy(block.blockHash)}
-                          className="p-1 bg-[#1A1A1A] border border-[#333333] hover:border-[#15803D] text-[#CCCCCC] hover:text-[#15803D] transition-colors"
+                          className="p-1 bg-[#1A1A1A] border border-[#333333] hover:border-[#15803D] text-[#CCCCCC] hover:text-[#15803D] transition-colors shrink-0"
                           title="Copiar Hash SHA-256"
                         >
                           {copiedHash === block.blockHash ? <Check className="w-3 h-3 text-[#15803D]" /> : <Copy className="w-3 h-3" />}
@@ -654,8 +666,8 @@ export const CultivationBlockchain: React.FC = () => {
                 {/* Arrow connector between blocks */}
                 {idx < filteredBlocks.length - 1 && (
                   <div className="flex justify-center py-2">
-                    <div className="px-2 py-1 bg-[#0E0E0E] border border-[#15803D] text-[#15803D] font-mono text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                      <ArrowDown className="w-3 h-3 animate-bounce" strokeWidth={2} />
+                    <div className="px-2.5 py-1 rounded-md bg-[#111714] border border-[#10B981]/50 text-[#10B981] font-mono text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                      <ArrowDown className="w-3 h-3" strokeWidth={2} />
                       ENLACE SHA-256 VERIFICADO
                     </div>
                   </div>
@@ -685,14 +697,14 @@ export const CultivationBlockchain: React.FC = () => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="relative z-50 w-full max-w-2xl bg-[#0E0E0E] border-2 border-[#15803D] p-6 shadow-[8px_8px_0px_0px_#15803D] max-h-[90vh] overflow-y-auto font-mono"
               >
-                <div className="flex items-center justify-between border-b border-[#15803D] pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Lock className="w-5 h-5 text-[#15803D]" strokeWidth={2} />
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#15803D] pb-3 mb-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Lock className="w-5 h-5 text-[#15803D] shrink-0" strokeWidth={2} />
                     <h2 className="font-bold text-base text-[#E5E5E5] uppercase">
                       Notarizar Nuevo Bloque de Cultivo
                     </h2>
                   </div>
-                  <span className="text-[10px] text-[#FACC15] font-bold">
+                  <span className="text-[10px] text-[#FACC15] font-bold shrink-0">
                     BLOQUE #{blocks.length + 1}
                   </span>
                 </div>

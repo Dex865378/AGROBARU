@@ -2,41 +2,50 @@ import React from 'react';
 import { 
   Sprout, 
   ShoppingBag, 
+  ShoppingCart,
   QrCode, 
   Building2, 
-  Bug, 
   Wifi, 
   WifiOff, 
   Radio, 
-  ShieldCheck, 
   Package, 
   LogIn, 
   LogOut, 
   User as UserIcon, 
   Star, 
-  Award, 
   Calculator,
   Languages,
-  Users
+  Users,
+  Bell
 } from 'lucide-react';
 import { useAppState } from '@/context/AppStateContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/types';
 import { calculateReputationTier } from '@/services/reputationService';
 import { GlobalSearchBar } from './GlobalSearchBar';
 import { ChatContact } from '@/components/chat/DirectMessageModal';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onNavigateToChat?: (contact: ChatContact) => void;
+  onOpenNotifications?: () => void;
+  unreadCount?: number;
+  cartCount?: number;
+  onOpenCart?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   activeTab, 
   setActiveTab,
-  onNavigateToChat 
+  onNavigateToChat,
+  onOpenNotifications,
+  unreadCount = 0,
+  cartCount = 0,
+  onOpenCart,
 }) => {
   const { 
     isOffline, 
@@ -45,8 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setCurrentRole,
     currentUser,
     firebaseUser,
-    isAuthLoading,
-    loginWithGoogle,
+    openAccountChooser,
     logout
   } = useAppState();
 
@@ -58,70 +66,109 @@ export const Navbar: React.FC<NavbarProps> = ({
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b-2 border-[#15803D] bg-[#0A0A0A]/95 backdrop-blur-md">
+    <header className="relative md:sticky md:top-0 z-40 w-full border-b border-[#1E2E26] bg-[#090D0B]/95 backdrop-blur-md">
       {/* Top Territorial & Network Status Ticker */}
-      <div className="bg-[#0E0E0E] border-b border-[#1E293B] px-4 py-1.5 flex flex-wrap items-center justify-between text-[11px] font-mono gap-2">
-        <div className="flex items-center gap-4 text-[#9E9E9E]">
-          <span className="flex items-center gap-1.5 text-[#15803D] font-bold">
-            <Radio className="w-3.5 h-3.5 animate-pulse text-[#15803D]" strokeWidth={1.5} />
-            ● Red AgroBarú Oficial | Puerto Armuelles, Chiriquí
+      <div className="bg-[#0C120E] border-b border-[#1E2E26] px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between text-[11px] font-mono gap-2">
+        <div className="flex items-center gap-2 text-[#9E9E9E] min-w-0">
+          <span className="flex items-center gap-1.5 text-[#10B981] font-semibold truncate">
+            <Radio className="w-3.5 h-3.5 text-[#10B981] shrink-0" strokeWidth={1.75} />
+            <span className="truncate">{language === 'en' ? 'Official AgroBarú Network | Puerto Armuelles' : 'Red AgroBarú Oficial | Puerto Armuelles'}</span>
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap max-w-full">
           {/* Language Selector ES / EN */}
           <button
             onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
-            className="flex items-center gap-1 bg-[#141414] hover:bg-[#1A1A1A] border border-[#FACC15] px-2 py-0.5 text-[10px] font-bold text-[#E5E5E5] shadow-[2px_2px_0px_0px_#FACC15] transition-all"
+            className="flex items-center gap-1 bg-[#111714] hover:bg-[#161E19] border border-[#1E2E26] hover:border-[#FACC15]/50 rounded-lg px-2.5 py-1 text-[10px] font-bold text-[#E5E5E5] transition-all"
             title="Cambiar Idioma / Switch Language"
           >
             <Languages className="w-3 h-3 text-[#FACC15]" />
-            <span>{language === 'es' ? 'ES 🇵🇦' : 'EN 🌐'}</span>
+            <span>{language === 'es' ? 'ES' : 'EN'}</span>
           </button>
 
           {/* Connection Status Indicator */}
           {!isOffline ? (
-            <span className="hidden sm:flex items-center gap-1 text-[#15803D] font-bold">
-              <Wifi className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {t('nav.online', 'Conectado en Vivo')}
+            <span className="hidden sm:flex items-center gap-1 text-[#10B981] font-semibold">
+              <Wifi className="w-3.5 h-3.5" strokeWidth={1.75} />
+              {t('nav.online', 'Conectado')}
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[#F97316] font-bold animate-pulse">
-              <WifiOff className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {t('nav.offline', 'Modo Offline (Guardado Local)')}
+            <span className="flex items-center gap-1 text-[#F97316] font-semibold animate-pulse">
+              <WifiOff className="w-3.5 h-3.5" strokeWidth={1.75} />
+              {t('nav.offline', 'Modo Offline')}
             </span>
           )}
 
           {syncQueue.length > 0 && (
-            <Badge variant="yellow" className="text-[10px] animate-bounce">
+            <Badge variant="yellow" className="text-[10px]">
               <Package className="w-3 h-3 mr-1" />
               {syncQueue.length} Por Sincronizar
             </Badge>
           )}
 
-          {/* Google Auth Status / Glowing Reputation Button */}
+          {/* Shopping Cart Trigger */}
+          {onOpenCart && (
+            <button
+              onClick={onOpenCart}
+              className="relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#10B981]/40 hover:border-[#10B981] text-[#ECFDF5] transition-all text-[11px] font-bold"
+              title="Abrir Carrito Multi-Lote"
+            >
+              <ShoppingCart className="w-3.5 h-3.5 text-[#10B981]" />
+              <span className="hidden sm:inline">Carrito</span>
+              {cartCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#10B981] text-[#05100A] text-[10px] font-black flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* FCM Push Notifications Bell */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative p-1.5 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#1E2E26] hover:border-[#10B981]/50 text-[#E5E5E5] transition-all"
+            title="Centro de Notificaciones"
+          >
+            <Bell className="w-4 h-4 text-[#FACC15]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#F97316] text-black text-[9px] font-black flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Acceso empresarial real (correo / Google) */}
+          <Link
+            to="/login"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#1E2E26] hover:border-[#10B981]/50 text-[#9E9E9E] hover:text-[#E5E5E5] text-[10px] font-bold transition-all"
+            title="Acceso empresarial con correo electrónico o Google"
+          >
+            <Building2 className="w-3 h-3 text-[#10B981]" />
+            <span className="hidden lg:inline">Acceso Empresarial</span>
+          </Link>
+
+          {/* Google Auth Status / Reputation Button */}
           {firebaseUser ? (
-            <div className="flex items-center gap-1.5 bg-[#141414] border border-[#15803D] px-2 py-0.5 shadow-[2px_2px_0px_0px_#15803D]">
+            <div className="flex items-center gap-1.5 bg-[#111714] border border-[#10B981]/40 rounded-lg px-2 py-0.5">
               <button
                 onClick={() => {
                   setActiveTab('profile');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo({ top: 0, behavior: 'auto' });
                 }}
-                className={`flex items-center gap-1.5 transition-all px-1.5 py-0.5 ${
-                  activeTab === 'profile' ? 'bg-[#15803D]/20 border border-[#15803D]' : 'hover:opacity-90'
+                className={`flex items-center gap-1.5 transition-all px-1.5 py-0.5 rounded-md ${
+                  activeTab === 'profile' ? 'bg-[#10B981]/20' : 'hover:opacity-90'
                 }`}
-                title="Abrir Mi Perfil y Credencial Completa"
+                title="Abrir Mi Perfil y Credencial"
               >
-                <div className={`w-4 h-4 overflow-hidden flex items-center justify-center ${tierInfo.avatarBorderClass}`}>
-                  {currentUser.photoURL ? (
-                    <img 
-                      src={currentUser.photoURL} 
-                      alt={currentUser.name} 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    <UserIcon className="w-3 h-3 text-[#15803D]" />
-                  )}
+                <div className={`w-4 h-4 rounded-full overflow-hidden flex items-center justify-center shrink-0 ${tierInfo.avatarBorderClass}`}>
+                  <SafeImage
+                    fallbackType="avatar"
+                    nameHint={currentUser.name}
+                    src={currentUser.photoURL}
+                    alt={currentUser.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className={`text-[10px] font-bold truncate max-w-[100px] ${tierInfo.nameGlowClass}`}>
                   {currentUser.name.split(' ')[0]}
@@ -131,68 +178,77 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {currentUser.reputationScore || 99.4}%
                 </span>
               </button>
+
+              <button
+                onClick={() => openAccountChooser()}
+                className="text-[#FACC15] hover:text-white px-1.5 py-0.5 text-[9px] font-bold border border-[#FACC15]/30 hover:border-[#FACC15] rounded transition-colors"
+                title="Cambiar cuenta de Google"
+              >
+                Cambiar cuenta
+              </button>
+
               <button
                 onClick={() => logout()}
-                className="text-[#F97316] hover:text-white p-0.5 ml-1"
+                className="text-[#F97316] hover:text-white p-0.5 ml-0.5"
                 title="Cerrar sesión de Google"
               >
                 <LogOut className="w-3 h-3" />
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => loginWithGoogle()}
-              disabled={isAuthLoading}
-              className="flex items-center gap-1.5 px-2 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#7C3AED] text-[#E5E5E5] text-[10px] font-bold transition-all shadow-[2px_2px_0px_0px_#7C3AED]"
+            <Link
+              to="/login"
+              title="Iniciar sesión con correo electrónico o Google"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#7C3AED]/60 text-[#E5E5E5] text-[10px] font-bold transition-all"
             >
-              <LogIn className="w-3 h-3 text-[#7C3AED]" />
-              {isAuthLoading ? 'Cargando...' : t('nav.login', 'Iniciar con Google')}
-            </button>
+              <LogIn className="w-3 h-3 text-[#A78BFA]" />
+              {t('nav.login', 'Iniciar sesión')}
+            </Link>
           )}
 
           {/* Role switcher */}
           <select
             value={currentRole}
             onChange={(e) => setCurrentRole(e.target.value as UserRole)}
-            className="bg-[#141414] border border-[#15803D] text-[#E5E5E5] text-[10px] px-2 py-0.5 font-mono focus:border-[#FACC15] focus:outline-none"
+            className="bg-[#111714] border border-[#1E2E26] rounded-lg text-[#E5E5E5] text-[10px] px-2 py-1 font-mono focus:border-[#10B981] focus:outline-none max-w-full"
           >
-            <option value="farmer">Rol: Productor (Barú)</option>
-            <option value="buyer">Rol: Comprador / Exportador</option>
-            <option value="cooperative">Rol: MIDA / Cooperativa</option>
+            <option value="farmer">{language === 'en' ? 'Role: Producer (Barú)' : 'Rol: Productor (Barú)'}</option>
+            <option value="buyer">{language === 'en' ? 'Role: Buyer / Exporter' : 'Rol: Comprador / Exportador'}</option>
+            <option value="cooperative">{language === 'en' ? 'Role: MIDA / Cooperative' : 'Rol: MIDA / Cooperativa'}</option>
           </select>
         </div>
       </div>
 
       {/* Main Navbar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between min-h-16 h-auto py-2.5 gap-4">
         {/* Brand Logo */}
         <div 
           onClick={() => setActiveTab('home')}
           className="flex items-center gap-3 cursor-pointer group shrink-0"
         >
-          <div className="w-10 h-10 bg-[#15803D] border-2 border-[#15803D] flex items-center justify-center font-display font-black text-black text-xl shadow-[3px_3px_0px_0px_#FACC15] group-hover:translate-x-0.5 group-hover:translate-y-0.5 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10B981] to-[#15803D] flex items-center justify-center font-display font-bold text-[#05100A] text-lg shadow-sm group-hover:scale-105 transition-transform">
             AB
           </div>
           <div>
-            <div className="font-display font-black text-xl tracking-wider text-[#E5E5E5] flex items-center gap-1.5">
-              AGRO<span className="text-[#15803D]">BARÚ</span>
+            <div className="font-display font-bold text-xl tracking-wider leading-snug text-[#ECFDF5] flex items-center gap-1.5">
+              AGRO<span className="text-[#10B981]">BARÚ</span>
             </div>
-            <div className="text-[9px] font-mono text-[#9E9E9E] uppercase tracking-widest -mt-1">
+            <div className="text-[9px] font-mono text-[#9E9E9E] uppercase tracking-widest mt-0.5 leading-normal">
               Barú • Chiriquí • Panamá
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center gap-1 font-mono text-xs font-bold">
+        <nav className="hidden md:flex items-center gap-1 font-sans text-xs font-semibold">
           {[
             { id: 'home', label: t('nav.home', 'Inicio') },
             { id: 'farmer', label: t('nav.farmer', 'Bitácora'), icon: Sprout },
             { id: 'marketplace', label: t('nav.marketplace', 'Mercado'), icon: ShoppingBag },
-            { id: 'traceability', label: t('nav.traceability', 'Verificador QR'), icon: QrCode },
-            { id: 'alerts', label: t('nav.alerts', 'Comunidad & Alertas'), icon: Users },
-            { id: 'calculator', label: t('nav.calculator', 'Calculadora'), icon: Calculator },
-            { id: 'cooperative', label: t('nav.cooperative', 'MIDA / GIS'), icon: Building2 },
+            { id: 'traceability', label: t('nav.traceability', 'Trazabilidad'), icon: QrCode },
+            { id: 'alerts', label: t('nav.alerts', 'Comunidad'), icon: Users },
+            { id: 'calculator', label: t('nav.calculator', 'Calculadoras'), icon: Calculator },
+            { id: 'cooperative', label: t('nav.cooperative', 'Cooperativa'), icon: Building2 },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -201,15 +257,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 key={item.id}
                 onClick={() => {
                   setActiveTab(item.id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo({ top: 0, behavior: 'auto' });
                 }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-all uppercase text-[11px] ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs ${
                   isActive
-                    ? 'bg-[#15803D] text-black border-2 border-[#15803D] shadow-[2px_2px_0px_0px_#FACC15]'
-                    : 'text-[#9E9E9E] hover:text-[#E5E5E5] hover:bg-[#141414] border-2 border-transparent'
+                    ? 'bg-[#10B981] text-[#05100A] font-bold shadow-sm'
+                    : 'text-[#9E9E9E] hover:text-[#ECFDF5] hover:bg-[#111714]'
                 }`}
               >
-                {Icon && <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                {Icon && <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />}
                 {item.label}
               </button>
             );
@@ -218,7 +274,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Global Search Strip (Header Integrated) */}
-      <div className="bg-[#0E0E0E] border-t border-[#1E293B] px-4 py-2 flex items-center justify-center">
+      <div className="bg-[#0C120E] border-t border-[#1E2E26] px-4 py-2 flex items-center justify-center">
         <GlobalSearchBar onNavigateToTab={setActiveTab} onNavigateToChat={onNavigateToChat} />
       </div>
     </header>

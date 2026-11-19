@@ -1,0 +1,6 @@
+# robots.txt for AgroBarú - Protocolo de Trazabilidad & Mercado Agrícola de Barú
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://mapache-4ab0f.web.app/sitemap.xml

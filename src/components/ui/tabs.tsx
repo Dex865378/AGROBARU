@@ -27,7 +27,7 @@ export function TabsList({ className, ...props }: React.HTMLAttributes<HTMLDivEl
   return (
     <div
       className={cn(
-        "inline-flex h-11 items-center justify-center bg-[#0E0E0E] p-1 border-2 border-[#15803D] shadow-[4px_4px_0px_0px_#1E293B]",
+        "inline-flex flex-wrap h-auto min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-[#111714] p-1.5 border border-emerald-500/20 shadow-sm",
         className
       )}
       {...props}
@@ -50,10 +50,10 @@ export function TabsTrigger({
     <button
       type="button"
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono font-bold uppercase transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center whitespace-normal text-center leading-snug rounded-lg px-3.5 py-2 min-h-[38px] text-xs font-sans font-semibold transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         isSelected
-          ? "bg-[#15803D] text-black shadow-sm font-black"
-          : "text-[#9E9E9E] hover:text-[#E5E5E5] hover:bg-[#1A1A1A]",
+          ? "bg-emerald-600 text-white shadow-sm"
+          : "text-slate-400 hover:text-slate-100 hover:bg-white/5",
         className
       )}
       onClick={() => context.onValueChange(value)}

@@ -1,4 +1,5 @@
 import { Farm, CultivationLog, ProductBatch, EscrowOrder, DistrictMetric, UserProfile } from '../types';
+import { BUNDLED_CROP_IMAGES } from '../lib/imageFallbacks';
 
 export const MOCK_USERS: UserProfile[] = [
   {
@@ -9,6 +10,13 @@ export const MOCK_USERS: UserProfile[] = [
     phone: '+507 6789-1234',
     location: 'Puerto Armuelles, Barú',
     badge: 'Productor Certificado MIDA #BARU-042',
+    midaRegistration: 'MIDA-CH-BARU-2024-0089',
+    username: 'dionisio_castillo',
+    reputationScore: 99.4,
+    ratingStars: 4.95,
+    successfulEscrowTrades: 12,
+    totalKgDelivered: 28400,
+    memberSince: '2024',
   },
   {
     id: 'USR-BUYER-01',
@@ -125,7 +133,7 @@ export const MOCK_LOGS: CultivationLog[] = [
     organicProductUsed: 'Enraizante a base de algas marinas y micorrizas nativas',
     operatorName: 'Dionisio Castillo & Cuadrilla #1',
     gpsCoords: { lat: 8.2831, lng: -82.8624 },
-    cryptoHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    cryptoHash: 'f6dfa6224fc28c93f22ecdf30edc368341258f7e1904dea26011e7085588cbb9',
     previousHash: '0000000000000000000000000000000000000000000000000000000000000000',
     evidencePhotos: [
       'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect fill="%23121212" width="300" height="200"/><rect x="10" y="10" width="280" height="180" fill="none" stroke="%23FF4500" stroke-width="2"/><text x="20" y="40" fill="%23FF4500" font-family="monospace" font-size="12">SIEMBRA DE HIJUELOS LOTE A-1</text><text x="20" y="70" fill="%23E5E5E5" font-family="monospace" font-size="10">GPS: 8.2831 N, 82.8624 W</text><text x="20" y="90" fill="%239E9E9E" font-family="monospace" font-size="10">ALT: 18m | EXP: OK</text><circle cx="150" cy="130" r="25" fill="%23FF4500" opacity="0.3"/><path d="M150 110 L150 150 M130 130 L170 130" stroke="%23FF4500" stroke-width="2"/></svg>'
@@ -144,8 +152,8 @@ export const MOCK_LOGS: CultivationLog[] = [
     organicProductUsed: 'Biofermento enriquecido COOPASBA + Sulfato de Potasio Orgánico',
     operatorName: 'Dionisio Castillo',
     gpsCoords: { lat: 8.2832, lng: -82.8622 },
-    cryptoHash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-    previousHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    cryptoHash: '096ee86315880fd139ba6b7ad13994abdb6d1c806062e63f3521ac6b0ebbdf51',
+    previousHash: 'f6dfa6224fc28c93f22ecdf30edc368341258f7e1904dea26011e7085588cbb9',
     evidencePhotos: [],
     synced: true,
   },
@@ -161,8 +169,8 @@ export const MOCK_LOGS: CultivationLog[] = [
     organicProductUsed: 'Bacillus subtilis cepa QST 713',
     operatorName: 'Técnico MIDA / Dionisio Castillo',
     gpsCoords: { lat: 8.2830, lng: -82.8625 },
-    cryptoHash: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-    previousHash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+    cryptoHash: 'ef32657f6dda2989d62b66e5aa6b6ff7d7a6b239cfd4abbade54e8c79137ec93',
+    previousHash: '096ee86315880fd139ba6b7ad13994abdb6d1c806062e63f3521ac6b0ebbdf51',
     evidencePhotos: [],
     synced: true,
   },
@@ -178,8 +186,8 @@ export const MOCK_LOGS: CultivationLog[] = [
     organicProductUsed: 'Agua ozonizada + extracto de semilla de cítricos',
     operatorName: 'Cuadrilla Empacadora Santa Clara',
     gpsCoords: { lat: 8.2831, lng: -82.8624 },
-    cryptoHash: '4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a',
-    previousHash: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+    cryptoHash: '2f64ec8566b7a49e4399ca87d10d1baad1dcb0d17629bcf2b82b51e5f0e0fa3b',
+    previousHash: 'ef32657f6dda2989d62b66e5aa6b6ff7d7a6b239cfd4abbade54e8c79137ec93',
     evidencePhotos: [
       'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect fill="%23121212" width="300" height="200"/><rect x="10" y="10" width="280" height="180" fill="none" stroke="%2310B981" stroke-width="2"/><text x="20" y="40" fill="%2310B981" font-family="monospace" font-size="12">COSECHA Y CONTROL DE CALIDAD</text><text x="20" y="70" fill="%23E5E5E5" font-family="monospace" font-size="10">CALIBRE: 44 mm | GRADO: EXPORT</text><text x="20" y="90" fill="%239E9E9E" font-family="monospace" font-size="10">PESO LOTE: 3,800 KG NETO</text><circle cx="230" cy="130" r="18" fill="%2310B981" opacity="0.4"/><text x="220" y="135" fill="%23E5E5E5" font-family="monospace" font-size="14">QR</text></svg>'
     ],
@@ -205,11 +213,14 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Banano Cavendish cultivado bajo prácticas agroforestales regenerativas en la llanura aluvial de Puerto Armuelles. Calibre uniforme de 42-46 mm, brix óptimo de 19-21° al madurar. Cero pesticidas sintéticos.',
     tags: ['Exportación', 'Orgánico', '100% Barú', 'Escrow Protegido', 'Trazabilidad SHA-256'],
-    images: ['/products/banana.jpg'],
+    images: [BUNDLED_CROP_IMAGES.banana],
     status: 'available',
     originCoordinates: { lat: 8.2831, lng: -82.8624 },
-    rootMerkleHash: '4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a',
+    rootMerkleHash: '0922a08f218cfe3ee83f0d08ce5310f2d5b631a7f3c05c9873d8c03fdaef37f0',
     totalLogsCount: 4,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // Hace 2 horas
+    updatedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    imageUpdatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'BATCH-002',
@@ -228,11 +239,14 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Granos de cacao criollo fermentados en cajones de madera de laurel durante 6 días con secado solar en camas elevadas. Notas frutales a maracuyá y madera noble. Perfil para chocolatería fina.',
     tags: ['Chocolatería Fina', 'Fermentación Controlada', 'Secado Solar', 'Origen Limones'],
-    images: ['/products/cacao.jpg'],
+    images: [BUNDLED_CROP_IMAGES.cacao],
     status: 'available',
     originCoordinates: { lat: 8.2415, lng: -82.8850 },
-    rootMerkleHash: '7c6a5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f',
+    rootMerkleHash: 'bc220bd0f72374ae141e28f95d44710d487fe8b6cf0bab94b05a5fc8751b6d64',
     totalLogsCount: 6,
+    createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(), // Hace 18 horas
+    updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    imageUpdatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'BATCH-003',
@@ -251,11 +265,14 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Grado A',
     description: 'Plátano de tamaño gigante (dedos de 28-32 cm), pulpa densa de alto rendimiento culinario y para procesamiento agroindustrial de tostones y harinas.',
     tags: ['Almidón Alto', 'Agroindustria', 'Barú Tradición', 'Directo Finca'],
-    images: ['/products/platano.jpg'],
+    images: [BUNDLED_CROP_IMAGES.platano],
     status: 'available',
     originCoordinates: { lat: 8.3120, lng: -82.7950 },
-    rootMerkleHash: '1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b',
+    rootMerkleHash: '3695d9a5382be9c963cb9457b8fe0243261c532c0b7de09ee45a6f5ee60ec853',
     totalLogsCount: 3,
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Hace 2 días
+    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUpdatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'BATCH-004',
@@ -274,11 +291,42 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Café cosechado bajo sombra de guamos y plátanos. Despulpado en seco natural (proceso Honey), acidez málica brillante y crema espesa para espresso gourmet.',
     tags: ['Café Especial', 'Proceso Honey', 'Juventud Rural', 'Comercio Directo'],
-    images: ['/products/cafe.jpg'],
+    images: [BUNDLED_CROP_IMAGES.cafe],
     status: 'available',
     originCoordinates: { lat: 8.3450, lng: -82.9100 },
-    rootMerkleHash: '89abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567',
+    rootMerkleHash: '111d99e8f8fa769fa448d6af9bb335ce8aee7ee91c5ab8a6b52737000ef6470e',
     totalLogsCount: 5,
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // Hace 4 días
+    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUpdatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'BATCH-005',
+    batchCode: 'AGRO-BARU-2026-CAV-072',
+    farmId: 'FARM-01',
+    farmName: 'Finca Agroecológica Santa Clara',
+    producerName: 'Don Dionisio Castillo',
+    corregimiento: 'Puerto Armuelles',
+    cropName: 'Banano Cavendish Exportación Lote 72',
+    variety: 'Gran Enano',
+    harvestDate: '2026-08-10',
+    quantityKg: 3000,
+    availableKg: 0,
+    pricePerKgUsd: 0.88,
+    certifications: ['GlobalG.A.P.', 'MIDA Buenas Prácticas'],
+    qualityGrade: 'Premium Exportación',
+    description: 'Lote de banano exportado en su totalidad mediante Escrow a Hamburgo. Stock agotado al 100%.',
+    tags: ['Exportación', '100% Vendido'],
+    images: [BUNDLED_CROP_IMAGES.banana],
+    status: 'sold_out',
+    originCoordinates: { lat: 8.2831, lng: -82.8624 },
+    rootMerkleHash: '0922a08f218cfe3ee83f0d08ce5310f2d5b631a7f3c05c9873d8c03fdaef37f0',
+    totalLogsCount: 4,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    imageUpdatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    soldOutAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // Vendido hace 6 horas (quedan 18h de purga)
+    autoPurgeHours: 24,
   }
 ];
 

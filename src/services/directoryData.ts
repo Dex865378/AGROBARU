@@ -1,3 +1,5 @@
+import { BUNDLED_CROP_IMAGES, createInitialsAvatarDataUri } from '../lib/imageFallbacks';
+
 export interface EnterpriseProfile {
   id: string;
   name: string;
@@ -35,7 +37,7 @@ export const ENTERPRISE_DIRECTORY: EnterpriseProfile[] = [
     corregimiento: 'Progreso',
     description: 'Marca insignia de procesamiento de derivados lácteos y apoyo a ganaderos y agricultores en Chiriquí.',
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1527153857715-3908f2ae5e81?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('La Chiricana'),
     phone: '+507 770-1122',
     rating: 4.95,
     featuredProducts: ['Leche Grado A', 'Queso Artesanal', 'Alimento Balanceado']
@@ -48,7 +50,7 @@ export const ENTERPRISE_DIRECTORY: EnterpriseProfile[] = [
     corregimiento: 'Progreso',
     description: 'Cooperativa histórica de pequeños y medianos productores bananeros del Distrito de Barú.',
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&auto=format&fit=crop&q=80',
+    avatar: BUNDLED_CROP_IMAGES.banana,
     phone: '+507 770-9844',
     rating: 4.98,
     featuredProducts: ['Banano Cavendish', 'Plátano Curaré', 'Servicios de Empaque']
@@ -61,7 +63,7 @@ export const ENTERPRISE_DIRECTORY: EnterpriseProfile[] = [
     corregimiento: 'Puerto Armuelles',
     description: 'Empresa exportadora que consolida contenedores Reefer hacia Europa y Norteamérica con trazabilidad MIDA.',
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=150&auto=format&fit=crop&q=80',
+    avatar: BUNDLED_CROP_IMAGES.platano,
     phone: '+507 770-4500',
     rating: 4.92,
     featuredProducts: ['Cajas 40lb Banano', 'Contenedores Reefer FOB']
@@ -74,7 +76,7 @@ export const ENTERPRISE_DIRECTORY: EnterpriseProfile[] = [
     corregimiento: 'Baco',
     description: 'Fabricación y suministro de bio-fungicidas preventivos para control de Sigatoka Negra con extractos de Melaleuca y Bacillus.',
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1589883661923-6476cb0ae9f2?w=150&auto=format&fit=crop&q=80',
+    avatar: BUNDLED_CROP_IMAGES.cacao,
     phone: '+507 6321-9988',
     rating: 4.88,
     featuredProducts: ['Bio-Fungicida Sigatoka 500SL', 'Microorganismos de Montaña']
@@ -85,9 +87,9 @@ export const ENTERPRISE_DIRECTORY: EnterpriseProfile[] = [
     brandName: 'Barú Reefer Cold Chain',
     category: 'Logística Fría',
     corregimiento: 'Puerto Armuelles',
-    description: 'Flota de camiones refrigerados con termo-registro continuo a 13.5°C para transporte seguro a muelle FOB.',
+    description: 'Flota de camiones refrigerados con termo-registro continuo a 13.5 °C para transporte seguro a muelle FOB.',
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('Barú Reefer'),
     phone: '+507 770-7733',
     rating: 4.96,
     featuredProducts: ['Contenedor 40ft HC', 'Monitoreo Satelital de Frío']
@@ -105,7 +107,7 @@ export const FARMER_DIRECTORY: FarmerDirectoryProfile[] = [
     areaHectares: 14.5,
     midaRegistration: 'MIDA-CH-BARU-2024-0089',
     reputation: 99.4,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('Dionisio Castillo'),
     phone: '+507 6789-1234'
   },
   {
@@ -118,7 +120,7 @@ export const FARMER_DIRECTORY: FarmerDirectoryProfile[] = [
     areaHectares: 8.2,
     midaRegistration: 'MIDA-CH-BARU-2023-0142',
     reputation: 98.9,
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('Carmen Morales'),
     phone: '+507 6822-4411'
   },
   {
@@ -131,7 +133,7 @@ export const FARMER_DIRECTORY: FarmerDirectoryProfile[] = [
     areaHectares: 12.0,
     midaRegistration: 'MIDA-CH-BARU-2024-0210',
     reputation: 99.1,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('Demetrio Samudio'),
     phone: '+507 6912-3344'
   },
   {
@@ -144,7 +146,7 @@ export const FARMER_DIRECTORY: FarmerDirectoryProfile[] = [
     areaHectares: 18.0,
     midaRegistration: 'MIDA-CH-BARU-2024-0312',
     reputation: 99.6,
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('Marcelino Vega'),
     phone: '+507 6655-7788'
   },
   {
@@ -157,7 +159,7 @@ export const FARMER_DIRECTORY: FarmerDirectoryProfile[] = [
     areaHectares: 22.4,
     midaRegistration: 'MIDA-CH-BARU-2024-0401',
     reputation: 98.4,
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    avatar: createInitialsAvatarDataUri('Carlos Batista'),
     phone: '+507 6544-2200'
   }
 ];

@@ -1,27 +1,103 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir lectura y escritura en las colecciones del protocolo AgroBarú
+    // 1. Perfiles de Usuarios / Productores
+    // Lectura pública para el directorio y marketplace. Escritura restringida al dueño de la cuenta.
     match /agrobaru_users/{userId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
     }
-    match /agrobaru_logs/{logId} {
-      allow read, write: if true;
-    }
-    match /agrobaru_batches/{batchId} {
-      allow read, write: if true;
-    }
-    match /agrobaru_orders/{orderId} {
-      allow read, write: if true;
-    }
+
+    // 2. Fincas Registradas de Barú
+    // Lectura pública de fincas certificadas. Modificación restringida a usuarios autenticados.
     match /agrobaru_farms/{farmId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
+
+    // 3. Bitácoras de Cultivo Criptográficas (Inmutables)
+    // Lectura pública para auditoría de trazabilidad QR. Escritura sólo por usuarios autenticados. No modificable/borrable.
+    match /agrobaru_logs/{logId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // 4. Lotes Agrícolas Certificados
+    // Lectura pública para escáner QR de exportación y catálogo. Creación/actualización por usuarios autenticados.
+    match /agrobaru_batches/{batchId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 5. Órdenes Escrow y Pagos en Custodia
+    // Solo las partes autenticadas pueden acceder y gestionar contratos de custodia.
+    match /agrobaru_orders/{orderId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    // 6. Alertas Fitosanitarias y Meteorológicas de Barú
+    // Lectura pública para prevención comunitaria. Escritura autenticada.
     match /agrobaru_alerts/{alertId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
+
+
+    // 7. Cuentas empresariales (nuevo sistema de autenticación)
+    // Cada usuario solo puede leer y modificar su propio perfil. El rol se
+    // actualiza desde /perfil o /seleccionar-rol por el propio dueño.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && (request.resource.data.role == null
+          || request.resource.data.role in ['productor', 'consumidor']);
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && (request.resource.data.role == null
+          || request.resource.data.role in ['productor', 'consumidor']);
+      allow delete: if false;
+    }
+
+    // 8. Productos / cosechas publicadas
+    // Catálogo de lectura pública para compradores; creación y gestión
+    // exclusiva del productor autenticado dueño del lote.
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.producerId == request.auth.uid
+        && request.resource.data.priceUsd is number
+        && request.resource.data.priceUsd > 0
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity > 0
+        && request.resource.data.status in ['disponible', 'en_cosecha']
+        && request.resource.data.traceabilityHash is string
+        && request.resource.data.traceabilityHash.matches('^[0-9a-f]{64}$');
+      allow update: if request.auth != null
+        && resource.data.producerId == request.auth.uid
+        && request.resource.data.producerId == resource.data.producerId
+        && request.resource.data.priceUsd is number
+        && request.resource.data.priceUsd > 0
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity > 0
+        && request.resource.data.status in ['disponible', 'en_cosecha']
+        && request.resource.data.traceabilityHash is string
+        && request.resource.data.traceabilityHash.matches('^[0-9a-f]{64}$');
+      allow delete: if request.auth != null
+        && resource.data.producerId == request.auth.uid;
+    }
+
+    // Regla de rechazo por defecto para colecciones no autorizadas
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

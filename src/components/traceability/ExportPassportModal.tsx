@@ -17,6 +17,7 @@ import { ProductBatch } from '@/types';
 import { useLanguage } from '@/context/LanguageContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { getBatchTraceUrl } from '@/lib/qrUtils';
+import { formatDateOnly } from '@/lib/utils';
 
 interface ExportPassportModalProps {
   open: boolean;
@@ -101,7 +102,7 @@ export const ExportPassportModal: React.FC<ExportPassportModalProps> = ({
 
             <div>
               <span className="text-[9px] uppercase text-[#666666] block">Fecha de Corte / Cosecha</span>
-              <span className="font-bold text-[#FACC15] text-sm">{batch.harvestDate}</span>
+              <span className="font-bold text-[#FACC15] text-sm">{formatDateOnly(batch.harvestDate)}</span>
               <span className="text-[10px] text-[#9E9E9E] block">Corte 100% Fresco</span>
             </div>
 

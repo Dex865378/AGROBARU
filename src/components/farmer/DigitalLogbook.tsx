@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { EvidenceUploader } from './EvidenceUploader';
 import { truncateHash, formatDate } from '@/lib/utils';
+import { getActivityTypeLabel } from '@/services/dateUtils';
 
 export const DigitalLogbook: React.FC = () => {
   const { farms, logs, addCultivationLog, currentUser, isOffline } = useAppState();
@@ -180,18 +181,18 @@ export const DigitalLogbook: React.FC = () => {
   return (
     <div className="space-y-6 font-mono">
       {/* Header with Farm Selector & Action */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-[#15803D] pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E2E26] pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-display font-black text-2xl text-[#E5E5E5] uppercase tracking-tight">
+            <h2 className="font-display font-bold text-2xl text-[#ECFDF5] tracking-normal leading-snug">
               Bitácora de Campo Inmutable
             </h2>
             {isOffline && (
-              <Badge variant="destructive">PWA Offline Mode</Badge>
+              <Badge variant="destructive">Modo Sin Conexión (PWA)</Badge>
             )}
           </div>
-          <p className="text-xs text-[#9E9E9E] font-sans">
-            Cada labor agrícola es firmada criptográficamente con SHA-256 y enlazada al bloque anterior.
+          <p className="text-xs text-[#9E9E9E] font-sans mt-0.5">
+            Cada labor agrícola queda registrada y verificada con firma digital SHA-256 para compradores y MIDA.
           </p>
         </div>
 
@@ -203,13 +204,13 @@ export const DigitalLogbook: React.FC = () => {
             disabled={isRecording}
             variant="purple"
             size="sm"
-            className="flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#7C3AED]"
+            className="flex items-center gap-1.5"
             title="Dictar labor por voz para auto-completar el formulario"
           >
             {isRecording ? (
               <>
-                <MicOff className="w-4 h-4 animate-ping text-[#FACC15]" />
-                <span className="animate-pulse">Escuchando...</span>
+                <MicOff className="w-4 h-4 animate-pulse text-[#FACC15]" />
+                <span>Escuchando...</span>
               </>
             ) : (
               <>
@@ -223,7 +224,7 @@ export const DigitalLogbook: React.FC = () => {
           <select
             value={selectedFarmId}
             onChange={(e) => setSelectedFarmId(e.target.value)}
-            className="bg-[#141414] border-2 border-[#15803D] text-[#E5E5E5] text-xs font-mono px-3 py-1.5 focus:border-[#FACC15] focus:outline-none"
+            className="bg-[#111714] border border-[#1E2E26] rounded-lg text-[#E5E5E5] text-xs font-mono px-3 py-1.5 focus:border-[#10B981] focus:outline-none"
           >
             {farms.map((f) => (
               <option key={f.id} value={f.id}>
@@ -245,7 +246,7 @@ export const DigitalLogbook: React.FC = () => {
       </div>
 
       {/* Farm Profile Summary Banner */}
-      <div className="bg-[#0E0E0E] border-2 border-[#15803D] p-4 flex flex-wrap items-center justify-between gap-4 shadow-[4px_4px_0px_0px_#15803D]">
+      <div className="bg-[#111714] border border-[#1E2E26] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#141414] border border-[#15803D] flex items-center justify-center text-[#15803D]">
             <MapPin className="w-5 h-5" strokeWidth={1.5} />
@@ -260,7 +261,7 @@ export const DigitalLogbook: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeFarm.certificaciones.map((cert) => (
             <Badge key={cert} variant="default">
               {cert}
@@ -278,21 +279,21 @@ export const DigitalLogbook: React.FC = () => {
       {showAddForm && (
         <form
           onSubmit={handleCreateLog}
-          className="bg-[#0E0E0E] border-2 border-[#15803D] p-6 space-y-5 shadow-[6px_6px_0px_0px_#15803D] animate-in fade-in slide-in-from-top-2"
+          className="bg-[#111714] border border-[#10B981]/50 rounded-xl p-6 space-y-5 shadow-lg animate-in fade-in slide-in-from-top-2"
         >
-          <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E293B] pb-3">
             <h3 className="font-display font-bold text-base text-[#E5E5E5] uppercase tracking-wide flex items-center gap-2">
-              <Lock className="w-4 h-4 text-[#15803D]" />
-              Crear Nuevo Bloque de Cultivo
+              <Lock className="w-4 h-4 text-[#15803D] shrink-0" />
+              <span>Crear Nuevo Bloque de Cultivo</span>
             </h3>
             <span className="text-[11px] font-mono text-[#15803D] font-bold">
               HASHING SHA-256 AUTOMÁTICO
             </span>
           </div>
 
-          <div className="bg-[#141414] border border-[#7C3AED] p-3 flex items-center justify-between gap-3 text-xs">
+          <div className="bg-[#141414] border border-[#7C3AED] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2">
-              <Mic className="w-4 h-4 text-[#7C3AED]" />
+              <Mic className="w-4 h-4 text-[#7C3AED] shrink-0" />
               <span>¿Prefieres dictar? Toca el botón para autocompletar con tu voz.</span>
             </div>
             <Button
@@ -300,7 +301,7 @@ export const DigitalLogbook: React.FC = () => {
               onClick={handleStartVoiceDictation}
               variant="outline"
               size="sm"
-              className="text-[10px] border-[#7C3AED] text-[#7C3AED]"
+              className="text-[10px] border-[#7C3AED] text-[#7C3AED] shrink-0 self-start sm:self-auto"
             >
               Dictar Ahora
             </Button>
@@ -315,15 +316,15 @@ export const DigitalLogbook: React.FC = () => {
               <select
                 value={activityType}
                 onChange={(e) => setActivityType(e.target.value as ActivityType)}
-                className="w-full bg-[#141414] border-2 border-[#1E293B] text-[#E5E5E5] text-xs font-mono p-2.5 focus:border-[#15803D] focus:outline-none"
+                className="w-full bg-[#090D0B] border border-[#1E2E26] rounded-lg text-[#E5E5E5] text-xs font-mono p-2.5 focus:border-[#10B981] focus:outline-none"
               >
-                <option value="siembra">🌱 Siembra / Propagación</option>
-                <option value="riego">💧 Riego y Drenaje</option>
-                <option value="fertilizacion">🍃 Fertilización Orgánica</option>
-                <option value="control_plagas">🛡️ Control Biológico (Sigatoka / Plagas)</option>
-                <option value="poda">✂️ Poda y Deshoje Fitosanitario</option>
-                <option value="cosecha">📦 Cosecha y Embalaje</option>
-                <option value="inspeccion_mida">🏛️ Inspección Técnica MIDA</option>
+                <option value="siembra">Siembra / Propagación</option>
+                <option value="riego">Riego y Drenaje</option>
+                <option value="fertilizacion">Fertilización Orgánica</option>
+                <option value="control_plagas">Control Biológico (Sigatoka / Plagas)</option>
+                <option value="poda">Poda y Deshoje Fitosanitario</option>
+                <option value="cosecha">Cosecha y Embalaje</option>
+                <option value="inspeccion_mida">Inspección Técnica MIDA</option>
               </select>
             </div>
 
@@ -416,7 +417,7 @@ export const DigitalLogbook: React.FC = () => {
 
       {/* Blockchain Timeline of Logs */}
       <div className="space-y-4">
-        <h3 className="font-display font-black text-lg text-[#E5E5E5] uppercase tracking-wide flex items-center justify-between">
+        <h3 className="font-display font-black text-lg text-[#E5E5E5] uppercase tracking-wide flex flex-wrap items-center justify-between gap-2">
           <span>Cadena Histórica de Bloques ({farmLogs.length})</span>
           <span className="text-xs font-mono text-[#15803D] font-bold">PROTOCOLO ACTIVO</span>
         </h3>
@@ -430,12 +431,12 @@ export const DigitalLogbook: React.FC = () => {
             {farmLogs.map((log, idx) => (
               <div
                 key={log.id}
-                className="bg-[#0E0E0E] border-2 border-[#15803D] p-5 shadow-[4px_4px_0px_0px_#15803D] space-y-3"
+                className="bg-[#111714] border border-[#1E2E26] hover:border-[#10B981]/50 rounded-xl p-5 shadow-sm space-y-3 transition-colors"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E293B] pb-2 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E2E26] pb-2 text-xs">
                   <div className="flex items-center gap-2">
                     {getActivityIcon(log.activityType)}
-                    <span className="font-bold text-[#E5E5E5] uppercase">{log.activityType.replace('_', ' ')}</span>
+                    <span className="font-bold text-[#E5E5E5] uppercase">{getActivityTypeLabel(log.activityType)}</span>
                     <Badge variant="outline">{log.cropName}</Badge>
                   </div>
                   <div className="text-[#9E9E9E] text-[11px] flex items-center gap-2">
@@ -449,8 +450,9 @@ export const DigitalLogbook: React.FC = () => {
                 </p>
 
                 {log.organicProductUsed && (
-                  <div className="text-[11px] text-[#15803D] font-bold">
-                    🌿 Insumo Orgánico: {log.organicProductUsed}
+                  <div className="text-[11px] text-[#10B981] font-bold flex items-center gap-1.5">
+                    <Leaf className="w-3.5 h-3.5 shrink-0" />
+                    <span>Insumo Orgánico: {log.organicProductUsed}</span>
                   </div>
                 )}
 

@@ -24,7 +24,10 @@ import {
   RefreshCw,
   TrendingUp,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Trash2,
+  Clock,
+  Timer
 } from 'lucide-react';
 import { ProductBatch } from '@/types';
 import { useAppState } from '@/context/AppStateContext';
@@ -36,6 +39,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { processAvatarUpload } from '@/services/reputationService';
 import { DirectMessageModal } from '@/components/chat/DirectMessageModal';
+import { DeleteBatchModal } from './DeleteBatchModal';
+import { formatTimeAgo, getFreshnessTier, getRemainingPurgeHours } from '@/services/dateUtils';
+import { SafeImage } from '@/components/ui/SafeImage';
+import { BUNDLED_CROP_IMAGES, resolveProductImage } from '@/lib/imageFallbacks';
 
 interface BatchDetailWithEvidenceModalProps {
   batch: ProductBatch | null;
@@ -52,7 +59,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
   onOpenEscrowCheckout,
   onRequestSample
 }) => {
-  const { currentUser, isOffline, updateBatchStockAndStatus } = useAppState();
+  const { currentUser, currentRole, isOffline, updateBatchStockAndStatus, deleteProductBatch } = useAppState();
   const { language, translateDynamic } = useLanguage();
   const { success, warning, error } = useNotification();
 
@@ -60,6 +67,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
   const [selectedStage, setSelectedStage] = useState<number>(0);
   const [isDetailTechnicalView, setIsDetailTechnicalView] = useState<boolean>(false);
   const [isDirectChatOpen, setIsDirectChatOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Stock edit states
   const [editAvailableKg, setEditAvailableKg] = useState<number>(batch ? batch.availableKg : 1000);
@@ -78,15 +86,15 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
   // Evidencias por etapas (Etapa 1: Plantación, 2: Crecimiento, 3: Fruta Final, 4: Empaque)
   const [stagePhotos, setStagePhotos] = useState<Record<number, string>>({
-    0: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop&q=80',
-    1: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
-    2: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&auto=format&fit=crop&q=80',
-    3: 'https://images.unsplash.com/photo-1589883661923-6476cb0ae9f2?w=600&auto=format&fit=crop&q=80',
+    0: BUNDLED_CROP_IMAGES.platano,
+    1: BUNDLED_CROP_IMAGES.cacao,
+    2: BUNDLED_CROP_IMAGES.banana,
+    3: BUNDLED_CROP_IMAGES.cafe,
   });
 
   const [customPhotos, setCustomPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1589883661923-6476cb0ae9f2?w=600&auto=format&fit=crop&q=80'
+    BUNDLED_CROP_IMAGES.banana,
+    BUNDLED_CROP_IMAGES.platano,
   ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,15 +102,19 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
   if (!batch) return null;
 
-  // STRICT OWNERSHIP CHECK: Only the producer who created/owns this batch can upload or edit photos and stock
-  const isOwner = Boolean(
-    currentUser && (
-      currentUser.id === batch.farmId ||
-      currentUser.name.trim().toLowerCase() === batch.producerName.trim().toLowerCase() ||
-      (currentUser.username && batch.producerUsername && currentUser.username.trim().toLowerCase() === batch.producerUsername.trim().toLowerCase()) ||
-      currentUser.role === 'farmer'
-    )
-  );
+  // STRICT OWNERSHIP CHECK: Only the producer who owns this batch (or cooperative admin) can edit photos, stock, or delete
+  const isOwner = (() => {
+    if (currentRole === 'cooperative') return true;
+    if (currentRole === 'buyer') return false;
+    return Boolean(
+      currentUser && (
+        currentUser.id === batch.farmId ||
+        currentUser.name.trim().toLowerCase() === batch.producerName.trim().toLowerCase() ||
+        (currentUser.username && batch.producerUsername && currentUser.username.trim().toLowerCase() === batch.producerUsername.trim().toLowerCase()) ||
+        currentUser.role === 'farmer'
+      )
+    );
+  })();
 
   const stages = [
     {
@@ -198,6 +210,11 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
   };
 
   const percentageSold = Math.min(100, Math.max(0, Math.round(((batch.quantityKg - batch.availableKg) / (batch.quantityKg || 1)) * 100)));
+  const isSoldOut = batch.availableKg <= 0 || batch.status === 'sold_out';
+  const freshness = getFreshnessTier(batch.createdAt);
+  const publishedTime = formatTimeAgo(batch.createdAt);
+  const imageUpdatedTime = formatTimeAgo(batch.imageUpdatedAt || batch.updatedAt || batch.createdAt);
+  const purgeCountdown = getRemainingPurgeHours(batch.soldOutAt, batch.autoPurgeHours || 24);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -208,14 +225,14 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
           <Badge variant="outline">MIDA // BARÚ</Badge>
           
           {/* Status Badge */}
-          {batch.status === 'sold_out' || batch.availableKg <= 0 ? (
-            <Badge variant="destructive">🔴 AGOTADO / VENDIDO</Badge>
+          {isSoldOut ? (
+            <Badge variant="destructive">AGOTADO / 100% VENDIDO</Badge>
           ) : batch.status === 'in_production' ? (
-            <Badge variant="live-yellow" pulse>🟡 EN PRODUCCIÓN (PRÓXIMA COSECHA)</Badge>
+            <Badge variant="live-yellow" pulse>EN PRODUCCIÓN (PRÓXIMA COSECHA)</Badge>
           ) : batch.status === 'reserved' ? (
-            <Badge variant="purple">🔒 LOTE RESERVADO</Badge>
+            <Badge variant="purple">LOTE RESERVADO</Badge>
           ) : (
-            <Badge variant="live-green" pulse>🟢 DISPONIBLE</Badge>
+            <Badge variant="live-green" pulse>DISPONIBLE</Badge>
           )}
 
           {isOwner && (
@@ -235,14 +252,39 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
         </DialogDescription>
       </DialogHeader>
 
+      {/* Freshness, Publication Date & Photos Timestamp */}
+      <div className="bg-[#111714] border border-[#1E2E26] rounded-lg p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono mt-2">
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 border rounded-md text-[10px] font-bold ${freshness.badgeClass}`}>
+            {freshness.label}
+          </span>
+          {isSoldOut && (
+            <span className="text-[10px] bg-[#EF4444]/20 border border-[#EF4444] text-[#FCA5A5] px-2 py-0.5 font-bold flex items-center gap-1">
+              <Timer className="w-3 h-3 text-[#FACC15]" />
+              {purgeCountdown.displayText || 'Autolimpieza en 24 horas'}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-[#9E9E9E]">
+          <span className="flex items-center gap-1" title="Fecha en que se listó el lote en el sitio">
+            <Clock className="w-3.5 h-3.5 text-[#15803D]" />
+            <span>Publicado: <strong className="text-[#E5E5E5]">{publishedTime}</strong></span>
+          </span>
+          <span className="flex items-center gap-1" title="Fecha de última actualización de fotografías">
+            <Camera className="w-3.5 h-3.5 text-[#7C3AED]" />
+            <span>Fotos: <strong className="text-[#E5E5E5]">{imageUpdatedTime}</strong></span>
+          </span>
+        </div>
+      </div>
+
       {/* Real-Time Stock Bar */}
       <div className="bg-[#141414] border border-[#1E293B] p-3 font-mono text-xs space-y-1.5 mt-2">
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
           <span className="text-[#9E9E9E]">
             Inventario Disponible: <strong className="text-[#15803D]">{batch.availableKg.toLocaleString()} Kg</strong> de {batch.quantityKg.toLocaleString()} Kg
           </span>
           <span className="text-[#FACC15] font-bold">
-            {batch.availableKg <= 0 ? '100% Vendido' : `${percentageSold}% Vendido`}
+            {isSoldOut ? '100% Vendido' : `${percentageSold}% Vendido`}
           </span>
         </div>
         <div className="w-full h-2 bg-[#0A0A0A] border border-[#1E293B] overflow-hidden flex">
@@ -254,10 +296,10 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
       </div>
 
       {/* Tabs Header */}
-      <div className="flex flex-wrap border-b border-[#1E293B] gap-2 pt-2 font-mono text-xs">
+      <div className="flex overflow-x-auto border-b border-[#1E293B] gap-1 pt-2 font-mono text-[11px]">
         <button
           onClick={() => setActiveTab('DETAILS')}
-          className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+          className={`px-2.5 py-1.5 border-b-2 font-bold transition-all uppercase shrink-0 whitespace-nowrap ${
             activeTab === 'DETAILS'
               ? 'border-[#15803D] text-[#15803D] bg-[#15803D]/10'
               : 'border-transparent text-[#9E9E9E] hover:text-[#E5E5E5]'
@@ -268,7 +310,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
         <button
           onClick={() => setActiveTab('EVIDENCE_PROCESS')}
-          className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+          className={`px-2.5 py-1.5 border-b-2 font-bold transition-all uppercase shrink-0 whitespace-nowrap ${
             activeTab === 'EVIDENCE_PROCESS'
               ? 'border-[#FACC15] text-[#FACC15] bg-[#FACC15]/10'
               : 'border-transparent text-[#9E9E9E] hover:text-[#E5E5E5]'
@@ -279,7 +321,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
         <button
           onClick={() => setActiveTab('CUSTOM_PHOTOS')}
-          className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+          className={`px-2.5 py-1.5 border-b-2 font-bold transition-all uppercase shrink-0 whitespace-nowrap ${
             activeTab === 'CUSTOM_PHOTOS'
               ? 'border-[#7C3AED] text-[#7C3AED] bg-[#7C3AED]/10'
               : 'border-transparent text-[#9E9E9E] hover:text-[#E5E5E5]'
@@ -291,13 +333,14 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
         {isOwner && (
           <button
             onClick={() => setActiveTab('STOCK_MANAGEMENT')}
-            className={`px-3 py-1.5 border-b-2 font-bold transition-all uppercase ${
+            className={`px-2.5 py-1.5 border-b-2 font-bold transition-all uppercase shrink-0 whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'STOCK_MANAGEMENT'
                 ? 'border-[#F97316] text-[#F97316] bg-[#F97316]/10'
                 : 'border-transparent text-[#F97316] hover:bg-[#F97316]/5'
             }`}
           >
-            ⚙️ {language === 'en' ? 'Manage Stock & Harvest' : 'Gestionar Stock & Cosecha'}
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{language === 'en' ? 'Manage Stock & Harvest' : 'Gestionar Stock & Cosecha'}</span>
           </button>
         )}
       </div>
@@ -306,69 +349,69 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
       {activeTab === 'DETAILS' && (
         <div className="space-y-4 py-3 font-mono text-xs">
           {/* Modal Progressive Disclosure Switcher */}
-          <div className="flex items-center justify-between bg-[#141414] p-1.5 border border-[#15803D]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#111714] rounded-lg p-2 border border-[#1E2E26]">
             <span className="text-[10px] text-[#9E9E9E] uppercase font-bold pl-1">
-              Nivel de Información:
+              Vista de Ficha:
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsDetailTechnicalView(false)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase transition-all ${
+                className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${
                   !isDetailTechnicalView
-                    ? 'bg-[#15803D] text-black shadow-[1px_1px_0px_0px_#FACC15]'
+                    ? 'bg-[#10B981] text-[#05100A]'
                     : 'text-[#9E9E9E] hover:text-[#E5E5E5]'
                 }`}
               >
-                🛍️ Resumen Esencial
+                Resumen Comercial
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsDetailTechnicalView(true)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase transition-all ${
+                className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${
                   isDetailTechnicalView
-                    ? 'bg-[#FACC15] text-black shadow-[1px_1px_0px_0px_#15803D]'
+                    ? 'bg-[#FACC15] text-[#05100A]'
                     : 'text-[#9E9E9E] hover:text-[#E5E5E5]'
                 }`}
               >
-                🔬 Desglose Técnico & Liquidación
+                Detalles Técnicos & Liquidación
               </button>
             </div>
           </div>
 
           {/* VISTA ESENCIAL - HIGHLIGHTS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+            <div className="bg-[#141414] p-3 border border-[#1E293B] min-w-0">
               <div className="text-[10px] text-[#666666] uppercase">Stock Disponible</div>
-              <div className="text-base font-display font-black text-[#15803D] mt-0.5">
+              <div className="text-sm sm:text-base font-display font-black text-[#15803D] mt-0.5 break-words">
                 {batch.availableKg.toLocaleString()} Kg
               </div>
               <div className="text-[9px] text-[#9E9E9E]">~{Math.round(batch.availableKg / 18.14)} cajas 40lb</div>
             </div>
 
-            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+            <div className="bg-[#141414] p-3 border border-[#1E293B] min-w-0">
               <div className="text-[10px] text-[#666666] uppercase">Precio FOB Barú</div>
-              <div className="text-base font-display font-black text-[#FACC15] mt-0.5">
+              <div className="text-sm sm:text-base font-display font-black text-[#FACC15] mt-0.5 break-words">
                 ${batch.pricePerKgUsd.toFixed(2)} / Kg
               </div>
               <div className="text-[9px] text-[#9E9E9E]">${(batch.pricePerKgUsd * 18.14).toFixed(2)} por caja</div>
             </div>
 
-            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+            <div className="bg-[#141414] p-3 border border-[#1E293B] min-w-0">
               <div className="text-[10px] text-[#666666] uppercase">Calidad Calibre</div>
-              <div className="text-base font-display font-black text-[#E5E5E5] mt-0.5">
+              <div className="text-sm sm:text-base font-display font-black text-[#E5E5E5] mt-0.5 break-words">
                 39 - 44
               </div>
               <div className="text-[9px] text-[#15803D]">Premium Export</div>
             </div>
 
-            <div className="bg-[#141414] p-3 border border-[#1E293B]">
+            <div className="bg-[#141414] p-3 border border-[#1E293B] min-w-0">
               <div className="text-[10px] text-[#666666] uppercase">Ubicación Finca</div>
-              <div className="text-base font-display font-black text-[#7C3AED] mt-0.5 truncate">
+              <div className="text-sm sm:text-base font-display font-black text-[#7C3AED] mt-0.5 truncate">
                 {batch.corregimiento}
               </div>
-              <div className="text-[9px] text-[#9E9E9E]">{batch.farmName}</div>
+              <div className="text-[9px] text-[#9E9E9E] line-clamp-2 leading-tight">{batch.farmName}</div>
             </div>
           </div>
 
@@ -384,7 +427,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
               <button
                 type="button"
                 onClick={() => setIsDirectChatOpen(true)}
-                className="px-2.5 py-1 bg-[#141414] hover:bg-[#15803D] hover:text-black border border-[#15803D] text-[#15803D] text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-[2px_2px_0px_0px_#15803D]"
+                className="px-3 py-1.5 rounded-lg bg-[#161E19] hover:bg-[#10B981] hover:text-[#05100A] border border-[#10B981]/50 text-[#10B981] text-[11px] font-bold flex items-center gap-1.5 transition-all"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Chat Directo</span>
@@ -398,21 +441,21 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
             <div className="space-y-3 pt-1 border-t border-[#1E293B] animate-fadeIn">
               {/* Financial Quote Breakdown */}
               <div className="bg-[#0A0A0A] border border-[#FACC15] p-3.5 space-y-2">
-                <div className="flex items-center justify-between text-[#FACC15] font-bold border-b border-[#1E293B] pb-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[#FACC15] font-bold border-b border-[#1E293B] pb-1">
                   <span>Desglose de Cotización Interna FOB Puerto Armuelles:</span>
                   <Badge variant="yellow" className="text-[9px]">Transparencia B2B</Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#CCCCCC]">
-                  <div>• <strong>Liquidación al Productor (97%):</strong> ${(batch.pricePerKgUsd * 0.97).toFixed(2)}/Kg</div>
-                  <div>• <strong>Garantía de Custodia Escrow (3%):</strong> ${(batch.pricePerKgUsd * 0.03).toFixed(2)}/Kg</div>
-                  <div>• <strong>Flete Reefer Termo-Registrado:</strong> $0.04/Kg (13.5°C)</div>
+                  <div>• <strong>Liquidación al Productor (98.5%):</strong> ${(batch.pricePerKgUsd * 0.985).toFixed(2)}/Kg</div>
+                  <div>• <strong>Garantía de Custodia Escrow (1.5%):</strong> ${(batch.pricePerKgUsd * 0.015).toFixed(2)}/Kg</div>
+                  <div>• <strong>Flete Reefer con Registro Térmico:</strong> $0.04/Kg (13.5 °C)</div>
                   <div>• <strong>Arbitraje Fitosanitario:</strong> Respaldado por MIDA Chiriquí</div>
                 </div>
               </div>
 
               {/* Detailed agronomic parameters */}
               <div className="bg-[#141414] p-4 border border-[#7C3AED] space-y-2">
-                <h4 className="text-xs font-display font-bold text-[#E5E5E5] uppercase border-b border-[#1E293B] pb-1.5 flex items-center justify-between">
+                <h4 className="text-xs font-display font-bold text-[#E5E5E5] uppercase border-b border-[#1E293B] pb-1.5 flex flex-wrap items-center justify-between gap-2">
                   <span>Parámetros Agronómicos & Fitoprotección:</span>
                   <Badge variant="purple" className="text-[9px]">DATUM WGS84</Badge>
                 </h4>
@@ -420,7 +463,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
                   <div>• <strong>Edad de Cosecha:</strong> 11 semanas desde floración.</div>
                   <div>• <strong>Longitud de Dedo:</strong> Mínimo 8.0 pulgadas (20.3 cm).</div>
                   <div>• <strong>Tratamiento de Corona:</strong> Solución de alumbre al 1.5%.</div>
-                  <div>• <strong>Temperatura de Almacén:</strong> 13.5°C constante (Cadena de frío).</div>
+                  <div>• <strong>Temperatura de Almacén:</strong> 13.5 °C constante (Cadena de frío).</div>
                   <div>• <strong>Registro MIDA BPA:</strong> BPA-BARU-2026-VAL</div>
                   <div>• <strong>GPS Finca:</strong> {batch.originCoordinates.lat.toFixed(5)}°N, {batch.originCoordinates.lng.toFixed(5)}°W</div>
                   <div className="sm:col-span-2">• <strong>Hash Raíz Merkle (SHA-256):</strong> <span className="font-mono text-[10px] text-[#15803D]">{batch.rootMerkleHash ? batch.rootMerkleHash.substring(0, 32) + '...' : '0x7e29...91ba'}</span></div>
@@ -454,8 +497,8 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
           {/* Active Step Viewer */}
           <div className="bg-[#141414] border border-[#FACC15] p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-[#1E293B] pb-2">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E293B] pb-2">
+              <div className="min-w-0">
                 <h4 className="text-sm font-display font-black text-[#E5E5E5] uppercase">
                   {stages[selectedStage].title}
                 </h4>
@@ -473,10 +516,12 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
             {/* Photo preview with security upload controls */}
             <div className="relative group overflow-hidden border-2 border-[#1E293B] bg-[#0A0A0A] aspect-video max-h-56 flex items-center justify-center">
               {stagePhotos[selectedStage] ? (
-                <img 
-                  src={stagePhotos[selectedStage]} 
+                <SafeImage
+                  src={selectedStage === 2 && batch.images?.[0] ? resolveProductImage(batch.images[0], batch.cropName) : stagePhotos[selectedStage]}
                   alt={stages[selectedStage].title}
-                  className="w-full h-full object-cover" 
+                  fallbackType="product"
+                  cropHint={batch.cropName}
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="text-center p-4 text-[#666666]">
@@ -518,8 +563,8 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
       {/* TAB 3: Custom Free Photo Gallery */}
       {activeTab === 'CUSTOM_PHOTOS' && (
         <div className="space-y-4 py-3 font-mono text-xs">
-          <div className="flex items-center justify-between border-b border-[#1E293B] pb-2">
-            <div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E293B] pb-2">
+            <div className="min-w-0">
               <h4 className="text-xs font-bold text-[#E5E5E5] uppercase">Galería Personalizada de la Finca</h4>
               <p className="text-[10px] text-[#9E9E9E]">Fotos de labores de campo, drenajes, calibración y visitas técnicas.</p>
             </div>
@@ -529,13 +574,13 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
                 onClick={() => customFileInputRef.current?.click()}
                 variant="purple"
                 size="sm"
-                className="flex items-center gap-1.5 text-xs"
+                className="flex items-center gap-1.5 text-xs shrink-0"
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span>Subir Foto Libre</span>
               </Button>
             ) : (
-              <Badge variant="outline" className="text-[9px]">
+              <Badge variant="outline" className="text-[9px] shrink-0">
                 Solo Lectura (Comprador)
               </Badge>
             )}
@@ -554,7 +599,13 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {customPhotos.map((photo, i) => (
               <div key={i} className="relative aspect-square border border-[#1E293B] overflow-hidden bg-[#141414] group">
-                <img src={photo} alt={`Foto libre ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <SafeImage
+                  src={i === 0 && batch.images?.[0] ? resolveProductImage(batch.images[0], batch.cropName) : photo}
+                  alt={`Foto libre ${i + 1}`}
+                  fallbackType="product"
+                  cropHint={batch.cropName}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
                 <div className="absolute bottom-0 inset-x-0 bg-black/80 p-1 text-[9px] text-[#15803D] flex items-center justify-between">
                   <span>Evidencia #{i + 1}</span>
                   <Check className="w-3 h-3 text-[#15803D]" />
@@ -656,12 +707,12 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full bg-[#0A0A0A] border border-[#1E293B] text-[#E5E5E5] text-xs font-mono p-2 focus:border-[#15803D] focus:outline-none"
+                  className="w-full bg-[#090D0B] border border-[#1E2E26] rounded-lg text-[#E5E5E5] text-xs font-mono p-2.5 focus:border-[#10B981] focus:outline-none"
                 >
-                  <option value="available">🟢 Disponible / En Venta</option>
-                  <option value="in_production">🟡 En Producción / Próxima Cosecha</option>
-                  <option value="sold_out">🔴 Agotado / Cosecha Terminada</option>
-                  <option value="reserved">🔒 Lote Reservado</option>
+                  <option value="available">Disponible / En Venta</option>
+                  <option value="in_production">En Producción / Próxima Cosecha</option>
+                  <option value="sold_out">Agotado / Cosecha Terminada</option>
+                  <option value="reserved">Lote Reservado</option>
                 </select>
               </div>
             </div>
@@ -678,18 +729,55 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
               </Button>
             </div>
           </div>
+
+          {/* Action 3: Delete Batch from Marketplace to avoid saturation */}
+          <div className="bg-[#EF4444]/10 border-2 border-[#EF4444] p-4 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-[#EF4444]">
+                <Trash2 className="w-4 h-4 shrink-0" />
+                <h4 className="font-display font-black text-sm uppercase">
+                  Eliminar Producto del Mercado
+                </h4>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold flex items-center gap-1.5 min-h-8 h-auto py-1.5 px-3"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Eliminar Lote Ahora</span>
+              </Button>
+            </div>
+            <p className="text-[11px] text-[#FCA5A5] font-sans">
+              Si se agotó la cosecha o finalizó este lote, puedes retirarlo de inmediato para no saturar el catálogo de los compradores. Los lotes 100% vendidos se depuran automáticamente tras 24 horas.
+            </p>
+          </div>
         </div>
       )}
 
       {/* Footer Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#1E293B] font-mono">
-        <Button
-          variant="outline"
-          onClick={onClose}
-          className="text-xs"
-        >
-          Cerrar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="text-xs"
+          >
+            Cerrar
+          </Button>
+
+          {isOwner && (
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="text-xs font-mono text-[#EF4444] hover:text-white hover:bg-[#EF4444]/20 border border-[#EF4444]/30 px-2.5 py-1.5 transition-all flex items-center gap-1"
+              title="Eliminar lote del mercado"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
+              <span>Eliminar Lote</span>
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           {onRequestSample && (
@@ -733,6 +821,18 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
           reputation: batch.producerReputation || 99.4
         } : null}
         initialMessage={`Hola ${batch.producerName}, tengo una consulta sobre el lote ${batch.batchCode} (${batch.cropName}).`}
+      />
+
+      {/* Delete Batch Confirmation Modal */}
+      <DeleteBatchModal
+        batch={batch}
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirmDelete={async (id) => {
+          await deleteProductBatch(id);
+          setIsDeleteModalOpen(false);
+          onClose();
+        }}
       />
     </Dialog>
   );

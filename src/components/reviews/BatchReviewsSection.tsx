@@ -16,6 +16,8 @@ import { useAppState } from '@/context/AppStateContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNotification } from '@/context/NotificationContext';
 import { calculateReputationTier } from '@/services/reputationService';
+import { SafeImage } from '@/components/ui/SafeImage';
+import { formatDateOnly } from '@/lib/utils';
 
 interface BatchReviewsSectionProps {
   batchId: string;
@@ -58,7 +60,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
         authorRole: 'buyer',
         authorTier: 'GOLD',
         rating: 5,
-        comment: 'Fruta recibida en temperatura óptima (13.5°C). Los fondos de Escrow se liberaron de inmediato al escanear la entrega en aduana.',
+        comment: 'Fruta recibida en temperatura óptima (13.5 °C). Los fondos de Escrow se liberaron de inmediato al escanear la entrega en aduana.',
         qualityCompliant: true,
         onTimeDelivery: true,
         createdAt: '2026-08-15',
@@ -109,7 +111,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
   return (
     <div className="space-y-4 font-mono text-xs">
       {/* Header Summary */}
-      <div className="flex items-center justify-between bg-[#0E0E0E] p-3 border border-[#1E293B]">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#0E0E0E] p-3 border border-[#1E293B]">
         <div className="flex items-center gap-3">
           <div className="text-2xl font-display font-black text-[#FACC15] flex items-center gap-1">
             <Star className="w-6 h-6 fill-[#FACC15]" />
@@ -139,12 +141,14 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
             <div key={rev.id} className="bg-[#141414] border border-[#1E293B] p-3 space-y-1.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-[#1A1A1A] border border-[#15803D] flex items-center justify-center text-[#15803D]">
-                    {rev.authorPhotoURL ? (
-                      <img src={rev.authorPhotoURL} alt={rev.authorName} className="w-full h-full object-cover" />
-                    ) : (
-                      <UserIcon className="w-3.5 h-3.5" />
-                    )}
+                  <div className="w-6 h-6 bg-[#1A1A1A] border border-[#15803D] flex items-center justify-center text-[#15803D] shrink-0 overflow-hidden">
+                    <SafeImage
+                      src={rev.authorPhotoURL}
+                      alt={rev.authorName}
+                      fallbackType="avatar"
+                      nameHint={rev.authorName}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <span className="font-bold text-[#E5E5E5] text-[11px]">{rev.authorName}</span>
                   <Badge variant="purple" className="text-[8px]">
@@ -159,7 +163,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
                       className={`w-3 h-3 ${i < rev.rating ? 'fill-[#FACC15]' : 'text-[#333333]'}`} 
                     />
                   ))}
-                  <span className="text-[9px] text-[#666666] ml-1">{rev.createdAt}</span>
+                  <span className="text-[9px] text-[#666666] ml-1">{formatDateOnly(rev.createdAt)}</span>
                 </div>
               </div>
 
@@ -186,7 +190,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
 
       {/* Add Review Form */}
       <form onSubmit={handleSubmitReview} className="bg-[#0E0E0E] border-2 border-[#15803D] p-3 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-bold text-[#E5E5E5] text-[11px] uppercase flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5 text-[#15803D]" />
             {language === 'en' ? 'Leave a Feedback & Verification' : 'Dejar Reseña & Calificación de Lote'}

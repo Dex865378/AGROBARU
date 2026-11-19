@@ -152,6 +152,11 @@ export interface ProductBatch {
   rootMerkleHash: string;
   totalLogsCount: number;
   reviews?: OrderReview[];
+  createdAt?: string; // ISO date of when the batch was listed on the platform
+  updatedAt?: string; // ISO date of last modification
+  imageUpdatedAt?: string; // ISO date of when images were taken/updated
+  soldOutAt?: string; // ISO date of when the batch was completely sold out (0 kg remaining)
+  autoPurgeHours?: number; // Hours before auto-deletion when 100% sold out (default 24h)
 }
 
 export type EscrowStatus = 
@@ -163,9 +168,28 @@ export type EscrowStatus =
   | 'RELEASED'
   | 'DISPUTED';
 
+export type DeliveryMode = 'pickup_armuelles' | 'national_reefer' | 'port_fob';
+
+export interface LogisticsDetails {
+  deliveryMode: DeliveryMode;
+  deliveryAddress: string;
+  freightUsd: number;
+  buyerTaxId?: string;
+  companyName?: string;
+}
+
+export interface CartItem {
+  id: string;
+  batchId: string;
+  quantityKg: number;
+  isSampleBox: boolean;
+  addedAt: string;
+}
+
 export interface EscrowOrder {
   id: string;
   orderCode: string;
+  cartGroupId?: string;
   batchId: string;
   productName: string;
   variety: string;
@@ -178,6 +202,11 @@ export interface EscrowOrder {
   quantityKg: number;
   totalUsd: number;
   escrowFeeUsd: number;
+  freightUsd?: number;
+  deliveryMode?: DeliveryMode;
+  deliveryAddress?: string;
+  buyerTaxId?: string;
+  companyName?: string;
   paymentMethod: 'Yappy Comercial' | 'Nequi Panamá' | 'ACH Transfer Directa';
   escrowStatus: EscrowStatus;
   createdAt: string;

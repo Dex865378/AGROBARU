@@ -8,7 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      're2js': path.resolve(__dirname, './src/services/re2js-shim.ts'),
     },
+  },
+  optimizeDeps: {
+    entries: ['index.html'],
   },
   server: {
     port: 3000,

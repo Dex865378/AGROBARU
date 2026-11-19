@@ -21,6 +21,7 @@ import { calculateReputationTier, checkUsernameAvailability, processAvatarUpload
 import { saveDocument, COLLECTIONS } from '@/services/firebase';
 import { useNotification } from '@/context/NotificationContext';
 import { UserProfile } from '@/types';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 interface UserProfileModalProps {
   open: boolean;
@@ -28,7 +29,7 @@ interface UserProfileModalProps {
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ open, onOpenChange }) => {
-  const { currentUser, firebaseUser } = useAppState();
+  const { currentUser, firebaseUser, updateUserProfile, openAccountChooser } = useAppState();
   const { success, warning, error } = useNotification();
 
   const [name, setName] = useState(currentUser.name || '');
@@ -99,7 +100,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ open, onOpen
         reputationTier: tierInfo.tier,
       };
 
-      await saveDocument(COLLECTIONS.USERS, updatedProfile);
+      await updateUserProfile(updatedProfile);
       success('Perfil Actualizado', 'Tus datos y credenciales se han sincronizado en Firestore.');
       onOpenChange(false);
     } catch (err: any) {
@@ -129,11 +130,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ open, onOpen
             {/* Avatar with dynamic border */}
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               <div className={`w-20 h-20 bg-[#141414] overflow-hidden flex items-center justify-center transition-all ${tierInfo.avatarBorderClass}`}>
-                {photoURL ? (
-                  <img src={photoURL} alt={name} className="w-full h-full object-cover" />
-                ) : (
-                  <UserIcon className="w-10 h-10 text-[#15803D]" />
-                )}
+                <SafeImage
+                  src={photoURL}
+                  alt={name}
+                  fallbackType="avatar"
+                  nameHint={name}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-[9px] font-bold">
                 <Camera className="w-4 h-4 mb-0.5 text-[#FACC15]" />
@@ -235,23 +238,37 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ open, onOpen
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-[#1E293B]">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#1E293B]">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+              openAccountChooser();
+            }}
+            className="border-[#7C3AED] text-[#7C3AED] hover:text-white hover:bg-[#7C3AED] text-xs"
           >
-            Cancelar
+            Cambiar Cuenta de Google
           </Button>
-          <Button 
-            type="submit" 
-            variant="default"
-            disabled={isSaving}
-            className="flex items-center gap-1.5"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            {isSaving ? 'Sincronizando...' : 'Guardar Credencial'}
-          </Button>
+
+          <div className="flex gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              variant="default"
+              disabled={isSaving}
+              className="flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {isSaving ? 'Sincronizando...' : 'Guardar Credencial'}
+            </Button>
+          </div>
         </div>
       </form>
     </Dialog>

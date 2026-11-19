@@ -1,7 +1,15 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ["class"],
   content: [
+    path.resolve(__dirname, 'index.html'),
+    path.resolve(__dirname, 'src/**/*.{js,ts,jsx,tsx}'),
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
@@ -48,7 +56,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
-        display: ["Space Grotesk", "Anton", "sans-serif"],
+        display: ["Space Grotesk", "Inter", "sans-serif"],
         mono: ["JetBrains Mono", "Courier New", "monospace"],
       },
       boxShadow: {
@@ -62,11 +70,12 @@ export default {
       },
       borderRadius: {
         none: "0px",
-        sm: "2px",
-        DEFAULT: "4px",
-        md: "4px",
-        lg: "4px",
-        xl: "4px",
+        sm: "4px",
+        DEFAULT: "6px",
+        md: "8px",
+        lg: "10px",
+        xl: "12px",
+        "2xl": "16px",
       },
       animation: {
         "shimmer": "shimmer 2s linear infinite",

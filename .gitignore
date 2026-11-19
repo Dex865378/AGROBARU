@@ -8,6 +8,9 @@ dist-ssr
 
 # Firebase
 .firebase
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 
 # Local env files
 .env
@@ -22,6 +25,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# Agent/audit tooling (local)
+.agents/
 
 # Editor directories and files
 .vscode/*

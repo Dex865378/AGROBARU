@@ -10,7 +10,8 @@ import {
   QrCode, 
   ArrowRight,
   ChevronRight,
-  Info
+  Info,
+  MapPin
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/LanguageContext';
@@ -39,8 +40,8 @@ const stepsData: PipelineStep[] = [
     stepNumber: 1,
     titleEs: 'Cosecha & Calibración en Finca',
     titleEn: 'Farm Harvest & Fruit Calibration',
-    locationEs: 'Progreso / Baco, Barú (GPS ±4m)',
-    locationEn: 'Progreso / Baco, Barú (GPS ±4m)',
+    locationEs: 'Progreso / Baco, Barú (GPS ±4 m)',
+    locationEn: 'Progreso / Baco, Barú (GPS ±4 m)',
     statusEs: 'Completado en Campo',
     statusEn: 'Completed On-Field',
     badgeVariant: 'live-green',
@@ -109,12 +110,12 @@ const stepsData: PipelineStep[] = [
     titleEn: 'Reefer Container Dispatch',
     locationEs: 'Ruta Barú ➔ Puerto Armuelles',
     locationEn: 'Barú Route ➔ Port Terminal',
-    statusEs: 'Cadena de Frío a 13.5°C',
-    statusEn: 'Cold Chain at 13.5°C',
+    statusEs: 'Cadena de Frío a 13.5 °C',
+    statusEn: 'Cold Chain at 13.5 °C',
     badgeVariant: 'live-green',
     icon: Truck,
-    descriptionEs: 'Carga en contenedor Reefer 40ft High Cube a temperatura constante de 13.5°C (56.3°F) con telemetría de humedad al 85%.',
-    descriptionEn: 'Loaded in 40ft High Cube Reefer at continuous 13.5°C (56.3°F) and 85% humidity.',
+    descriptionEs: 'Carga en contenedor Reefer 40ft High Cube a temperatura constante de 13.5 °C (56.3°F) con telemetría de humedad al 85%.',
+    descriptionEn: 'Loaded in 40ft High Cube Reefer at continuous 13.5 °C (56.3°F) and 85% humidity.',
     securityProofEs: 'Marchamo aduanero electrónico registrado en el pasaporte de exportación.',
     securityProofEn: 'Electronic customs seal hash logged into digital export passport.',
     sampleHash: '0x44d1...88c2',
@@ -145,13 +146,13 @@ export const ExportPipelineVisualizer: React.FC = () => {
   const activeStep = stepsData[activeStepIndex];
 
   return (
-    <div className="bg-[#0E0E0E] border-2 border-[#15803D] p-6 shadow-[6px_6px_0px_0px_#15803D] space-y-6 font-mono">
+    <div className="bg-[#111714] border border-[#1E2E26] rounded-xl p-6 shadow-md space-y-6 font-mono">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E293B] pb-4 gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="live-green">PROTOCOLO DE EXPORTACIÓN DIRECTA</Badge>
-            <Badge variant="outline">MIDA & ACH BARÚ</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="live-green">{language === 'en' ? 'DIRECT EXPORT PROTOCOL' : 'PROTOCOLO DE EXPORTACIÓN DIRECTA'}</Badge>
+            <Badge variant="outline">MIDA & BPA BARÚ</Badge>
           </div>
           <h3 className="text-lg font-display font-black text-[#E5E5E5] uppercase mt-1">
             {language === 'en' ? '6-Stage Cryptographic Traceability Pipeline' : 'Cadena de Trazabilidad Criptográfica en 6 Etapas'}
@@ -187,20 +188,20 @@ export const ExportPipelineVisualizer: React.FC = () => {
                   : 'bg-[#141414] border-[#1E293B] hover:border-[#15803D]/60'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className={`text-[10px] font-black px-1.5 py-0.5 border ${
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <span className={`text-[10px] font-black px-1.5 py-0.5 border shrink-0 ${
                   isSelected ? 'bg-[#15803D] text-black border-[#15803D]' : 'bg-[#1A1A1A] text-[#9E9E9E] border-[#262626]'
                 }`}>
                   0{step.stepNumber}
                 </span>
-                <Icon className={`w-4 h-4 ${isSelected ? 'text-[#FACC15]' : 'text-[#666666]'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#FACC15]' : 'text-[#666666]'}`} />
               </div>
 
-              <div className="text-[11px] font-bold uppercase text-[#E5E5E5] leading-tight line-clamp-2">
+              <div className="text-[10px] sm:text-[11px] font-bold uppercase text-[#E5E5E5] leading-snug line-clamp-3">
                 {language === 'en' ? step.titleEn : step.titleEs}
               </div>
 
-              <div className="text-[9px] text-[#15803D] truncate font-bold">
+              <div className="text-[9px] text-[#15803D] line-clamp-2 font-bold">
                 {language === 'en' ? step.statusEn : step.statusEs}
               </div>
             </button>
@@ -209,23 +210,24 @@ export const ExportPipelineVisualizer: React.FC = () => {
       </div>
 
       {/* Detail Showcase of Active Stage */}
-      <div className="bg-[#141414] border border-[#15803D] p-5 relative overflow-hidden space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#1E293B] pb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#15803D] flex items-center justify-center font-display font-black text-black text-lg">
+      <div className="bg-[#090D0B] border border-[#1E2E26] rounded-xl p-4 sm:p-5 relative overflow-hidden space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#1E2E26] pb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-[#10B981] flex items-center justify-center font-display font-bold text-[#05100A] text-lg">
               0{activeStep.stepNumber}
             </div>
-            <div>
-              <h4 className="text-base font-display font-black text-[#E5E5E5] uppercase">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-base font-display font-bold text-[#ECFDF5] uppercase break-words">
                 {language === 'en' ? activeStep.titleEn : activeStep.titleEs}
               </h4>
-              <div className="text-xs text-[#9E9E9E]">
-                📍 {language === 'en' ? activeStep.locationEn : activeStep.locationEs}
+              <div className="text-xs text-[#9E9E9E] flex items-center gap-1 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                <span className="truncate">{language === 'en' ? activeStep.locationEn : activeStep.locationEs}</span>
               </div>
             </div>
           </div>
 
-          <Badge variant={activeStep.badgeVariant} pulse>
+          <Badge variant={activeStep.badgeVariant} pulse className="self-start md:self-auto shrink-0">
             {language === 'en' ? activeStep.statusEn : activeStep.statusEs}
           </Badge>
         </div>

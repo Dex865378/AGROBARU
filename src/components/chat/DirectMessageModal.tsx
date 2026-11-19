@@ -10,7 +10,8 @@ import {
   Phone, 
   Sparkles,
   Paperclip,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAppState } from '@/context/AppStateContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNotification } from '@/context/NotificationContext';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 export interface ChatContact {
   id: string;
@@ -142,32 +144,32 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
       <DialogHeader className="border-b border-[#1E293B] pb-3">
         <div className="flex items-center gap-3">
           <div className="relative w-11 h-11 border-2 border-[#15803D] bg-[#141414] overflow-hidden shrink-0">
-            {contact.avatar ? (
-              <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center font-bold text-[#15803D]">
-                {contact.name.charAt(0)}
-              </div>
-            )}
+            <SafeImage
+              src={contact.avatar}
+              alt={contact.name}
+              fallbackType="avatar"
+              nameHint={contact.name}
+              className="w-full h-full object-cover"
+            />
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#15803D] border border-black" />
           </div>
 
           <div>
-            <div className="flex items-center gap-1.5">
-              <DialogTitle className="text-base leading-tight font-display font-black text-[#E5E5E5]">
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="text-base leading-snug font-display font-bold text-[#E5E5E5]">
                 {contact.name}
               </DialogTitle>
-              <Badge variant="live-green" className="text-[9px] py-0">En línea</Badge>
+              <Badge variant="live-green" className="text-[9px] py-0.5">En línea</Badge>
             </div>
             
-            <div className="text-xs text-[#9E9E9E] font-mono flex items-center gap-2 mt-0.5">
+            <div className="text-xs text-[#9E9E9E] font-mono flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
               <span className="flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-[#15803D]" />
                 {contact.corregimiento || 'Barú, Chiriquí'}
               </span>
               <span>•</span>
               <span className="text-[#FACC15] font-bold">
-                ⭐ {contact.reputation ? `${contact.reputation}% Reputación` : '99.4% Verificado'}
+                ★ {contact.reputation ? `${Number(contact.reputation).toFixed(1)}% Reputación` : '99.4% Verificado'}
               </span>
             </div>
           </div>
@@ -175,10 +177,11 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
       </DialogHeader>
 
       {/* Message Chat Feed */}
-      <div className="p-4 space-y-3 max-h-[50vh] min-h-[300px] overflow-y-auto font-mono text-xs bg-[#0A0A0A]/90">
+      <div className="p-4 space-y-3 max-h-[50vh] min-h-[300px] overflow-y-auto font-mono text-xs bg-[#090D0B]/90">
         <div className="text-center my-2">
-          <span className="bg-[#141414] text-[#666666] px-3 py-1 text-[10px] border border-[#1E293B]">
-            🔒 Canal Directo Seguro • Barú Escrow Protected
+          <span className="bg-[#111714] text-[#9E9E9E] px-3 py-1 rounded-full text-[10px] border border-[#1E2E26] inline-flex items-center gap-1.5">
+            <Lock className="w-3 h-3 text-[#10B981]" />
+            <span>Canal Directo Seguro • Barú Escrow Protected</span>
           </span>
         </div>
 
@@ -188,10 +191,10 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
             className={`flex flex-col ${msg.isSelf ? 'items-end' : 'items-start'}`}
           >
             <div 
-              className={`max-w-[80%] p-3 text-xs leading-relaxed border ${
+              className={`max-w-[80%] p-3 rounded-xl text-xs leading-relaxed border ${
                 msg.isSelf
-                  ? 'bg-[#15803D]/20 border-[#15803D] text-[#E5E5E5] shadow-[2px_2px_0px_0px_#15803D]'
-                  : 'bg-[#141414] border-[#1E293B] text-[#CCCCCC] shadow-[2px_2px_0px_0px_#262626]'
+                  ? 'bg-[#10B981]/15 border-[#10B981]/60 text-[#ECFDF5]'
+                  : 'bg-[#111714] border-[#1E2E26] text-[#CCCCCC]'
               }`}
             >
               {!msg.isSelf && (

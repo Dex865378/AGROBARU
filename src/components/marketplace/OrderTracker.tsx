@@ -5,7 +5,9 @@ import {
   AlertTriangle, 
   Thermometer, 
   Lock, 
-  DollarSign
+  DollarSign,
+  Download,
+  MapPin
 } from 'lucide-react';
 import { useAppState } from '@/context/AppStateContext';
 import { EscrowOrder, EscrowStatus } from '@/types';
@@ -13,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton } from '@/components/ui/dialog';
 import { formatCurrency, truncateHash } from '@/lib/utils';
-import confetti from 'canvas-confetti';
+import { downloadOrderReceipt } from '@/services/receiptService';
 
 export const OrderTracker: React.FC = () => {
   const { orders, advanceEscrowStatus } = useAppState();
@@ -22,6 +24,15 @@ export const OrderTracker: React.FC = () => {
   const [disputeModalOpen, setDisputeModalOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
 
+  const getTempStats = (order: EscrowOrder) => {
+    const temps = (order.temperatureLog || []).map((t) => t.tempC);
+    if (temps.length === 0) return null;
+    const min = Math.min(...temps);
+    const max = Math.max(...temps);
+    const avg = temps.reduce((s, t) => s + t, 0) / temps.length;
+    return { min, max, avg };
+  };
+
   const getStatusBadge = (status: EscrowStatus) => {
     switch (status) {
       case 'FUNDED':
@@ -29,7 +40,7 @@ export const OrderTracker: React.FC = () => {
       case 'DISPATCHED':
         return <Badge variant="purple">Despachado de Finca</Badge>;
       case 'IN_TRANSIT':
-        return <Badge variant="default" className="animate-pulse">En Tránsito Frío (13.5°C)</Badge>;
+        return <Badge variant="default">En Tránsito</Badge>;
       case 'DELIVERED_PENDING_INSPECTION':
         return <Badge variant="yellow">Entregado (Inspección Activa)</Badge>;
       case 'RELEASED':
@@ -43,12 +54,6 @@ export const OrderTracker: React.FC = () => {
 
   const handleReleaseEscrow = async (orderId: string) => {
     await advanceEscrowStatus(orderId, 'RELEASED');
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#15803D', '#7C3AED', '#FACC15', '#F97316']
-    });
   };
 
   const handleOpenDispute = async (e: React.FormEvent) => {
@@ -61,25 +66,27 @@ export const OrderTracker: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-[#15803D] pb-4">
+    <div className="space-y-6 font-sans">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-500/20 pb-4">
         <div>
-          <h2 className="font-display font-black text-2xl text-[#E5E5E5] uppercase tracking-tight">
-            Monitor de Contratos Escrow & Envíos
+          <h2 className="font-display font-bold text-2xl text-slate-100 tracking-normal leading-snug">
+            Mis Contratos y Seguimiento de Entregas
           </h2>
-          <p className="text-xs text-[#9E9E9E] font-sans">
-            Transparencia de pago condicional: Los fondos están seguros hasta la verificación física en destino.
+          <p className="text-xs text-slate-400">
+            Transparencia de pago protegido: el dinero permanece en custodia hasta confirmar la recepción física conforme.
           </p>
         </div>
 
-        <div className="text-xs font-mono text-[#9E9E9E] bg-[#121212] p-2 border border-[#15803D]">
-          Contratos Registrados: <strong className="text-[#15803D]">{orders.length}</strong>
+        <div className="text-xs font-mono text-slate-300 bg-[#111714] px-3 py-2 rounded-lg border border-emerald-500/20 self-start">
+          Contratos Activos: <strong className="text-emerald-400">{orders.length}</strong>
         </div>
       </div>
 
       {orders.length === 0 ? (
-        <div className="bg-[#121212] border-2 border-[#1E293B] p-8 text-center text-[#9E9E9E] font-mono text-xs">
-          No hay órdenes de Escrow activas. Realiza una compra en el Catálogo de Productos para iniciar un contrato.
+        <div className="bg-[#111714] border border-slate-800 rounded-xl p-10 text-center text-slate-400 text-xs space-y-2">
+          <Lock className="w-7 h-7 text-slate-500 mx-auto" />
+          <div className="font-semibold text-slate-200 text-sm">Aún no tienes órdenes registradas</div>
+          <p>Agrega uno o varios lotes al carrito en el Mercado Agrícola para iniciar un contrato de compra protegida.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -87,88 +94,96 @@ export const OrderTracker: React.FC = () => {
             return (
               <div
                 key={order.id}
-                className="bg-[#121212] border-2 border-[#15803D] p-6 space-y-5 shadow-[4px_4px_0px_0px_#15803D] hover:border-[#7C3AED] hover:shadow-[6px_6px_0px_0px_#7C3AED] transition-all"
+                className="bg-[#111714] border border-emerald-500/20 rounded-xl p-5 sm:p-6 space-y-5 shadow-lg shadow-black/25 hover:border-emerald-500/40 transition-all"
               >
                 {/* Header Strip */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#15803D]/40 pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#15803D]/15 border border-[#15803D] flex items-center justify-center text-[#15803D]">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                       <Lock className="w-5 h-5" strokeWidth={1.5} />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-display font-bold text-base text-[#E5E5E5] uppercase">
-                          {order.productName} ({order.quantityKg} Kg)
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-display font-bold text-base text-slate-100">
+                          {order.productName} ({order.quantityKg.toLocaleString()} Kg)
                         </h3>
                         {getStatusBadge(order.escrowStatus)}
                       </div>
-                      <div className="text-[11px] font-mono text-[#9E9E9E] mt-0.5">
-                        Contrato: <span className="text-[#15803D]">{order.orderCode}</span> • Finca: {order.farmName} ({order.farmerName})
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Contrato: <span className="font-mono text-emerald-400 font-semibold">{order.orderCode}</span> • Finca: {order.farmName} ({order.farmerName})
                       </div>
+                      {order.deliveryAddress && (
+                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-emerald-400" />
+                          <span>Destino: {order.deliveryAddress}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="text-right font-mono">
-                    <div className="text-xs text-[#9E9E9E]">MONTO EN CUSTODIA</div>
-                    <div className="text-base font-display font-bold text-[#15803D]">
-                      {formatCurrency(order.totalUsd)}
+                  <div className="text-left sm:text-right">
+                    <div className="text-[11px] text-slate-400">Monto en Custodia</div>
+                    <div className="text-lg font-mono font-bold text-emerald-400">
+                      {formatCurrency(order.totalUsd + (order.freightUsd || 0))}
                     </div>
-                    <div className="text-[10px] text-[#666666]">Método: {order.paymentMethod}</div>
+                    <div className="text-[11px] text-slate-500">Pago: {order.paymentMethod}</div>
                   </div>
                 </div>
 
                 {/* Visual Pipeline Bar */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
-                  {/* Step 1 */}
-                  <div className={`p-3 border ${order.escrowStatus !== 'CREATED' ? 'border-[#15803D] bg-[#15803D]/10 text-[#15803D]' : 'border-[#1E293B] bg-[#0E0E0E] text-[#666666]'}`}>
-                    <div className="font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5} /> 1. Fondos Bloqueados
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+                  <div className={`p-3 rounded-lg border ${order.escrowStatus !== 'CREATED' ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300' : 'border-slate-800 bg-[#0B100D] text-slate-500'}`}>
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5} /> 1. Fondos Asegurados
                     </div>
-                    <div className="text-[10px] mt-1 text-[#9E9E9E]">Pago retenido en Escrow</div>
+                    <div className="text-[11px] mt-1 text-slate-400">Retenido en custodia Escrow</div>
                   </div>
 
-                  {/* Step 2 */}
-                  <div className={`p-3 border ${['DISPATCHED', 'IN_TRANSIT', 'DELIVERED_PENDING_INSPECTION', 'RELEASED'].includes(order.escrowStatus) ? 'border-[#7C3AED] bg-[#7C3AED]/10 text-[#7C3AED]' : 'border-[#1E293B] bg-[#0E0E0E] text-[#666666]'}`}>
-                    <div className="font-bold flex items-center gap-1.5">
+                  <div className={`p-3 rounded-lg border ${['DISPATCHED', 'IN_TRANSIT', 'DELIVERED_PENDING_INSPECTION', 'RELEASED'].includes(order.escrowStatus) ? 'border-violet-500/35 bg-violet-500/10 text-violet-300' : 'border-slate-800 bg-[#0B100D] text-slate-500'}`}>
+                    <div className="font-semibold flex items-center gap-1.5">
                       <Truck className="w-3.5 h-3.5" strokeWidth={1.5} /> 2. Despacho de Finca
                     </div>
-                    <div className="text-[10px] mt-1 text-[#9E9E9E] truncate">{order.trackingNumber}</div>
+                    <div className="text-[11px] mt-1 font-mono text-slate-400 truncate">{order.trackingNumber}</div>
                   </div>
 
-                  {/* Step 3 */}
-                  <div className={`p-3 border ${['DELIVERED_PENDING_INSPECTION', 'RELEASED'].includes(order.escrowStatus) ? 'border-[#FACC15] bg-[#FACC15]/10 text-[#FACC15]' : 'border-[#1E293B] bg-[#0E0E0E] text-[#666666]'}`}>
-                    <div className="font-bold flex items-center gap-1.5">
-                      <Thermometer className="w-3.5 h-3.5" strokeWidth={1.5} /> 3. Cadena de Frío
+                  <div className={`p-3 rounded-lg border ${['DELIVERED_PENDING_INSPECTION', 'RELEASED'].includes(order.escrowStatus) ? 'border-amber-500/35 bg-amber-500/10 text-amber-300' : 'border-slate-800 bg-[#0B100D] text-slate-500'}`}>
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <Thermometer className="w-3.5 h-3.5" strokeWidth={1.5} /> 3. Control de Temperatura
                     </div>
-                    <div className="text-[10px] mt-1 text-[#9E9E9E]">13.5°C Promedio Termo</div>
+                    <div className="text-[11px] mt-1 text-slate-400">
+                      {getTempStats(order) ? `${getTempStats(order)!.avg.toFixed(1)} °C promedio registrado` : 'Sin registro térmico'}
+                    </div>
                   </div>
 
-                  {/* Step 4 */}
-                  <div className={`p-3 border ${order.escrowStatus === 'RELEASED' ? 'border-[#15803D] bg-[#15803D]/10 text-[#15803D]' : order.escrowStatus === 'DISPUTED' ? 'border-[#F97316] bg-[#F97316]/10 text-[#F97316]' : 'border-[#1E293B] bg-[#0E0E0E] text-[#666666]'}`}>
-                    <div className="font-bold flex items-center gap-1.5">
+                  <div className={`p-3 rounded-lg border ${order.escrowStatus === 'RELEASED' ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300' : order.escrowStatus === 'DISPUTED' ? 'border-red-500/35 bg-red-500/10 text-red-300' : 'border-slate-800 bg-[#0B100D] text-slate-500'}`}>
+                    <div className="font-semibold flex items-center gap-1.5">
                       <DollarSign className="w-3.5 h-3.5" strokeWidth={1.5} /> 4. Pago Liberado
                     </div>
-                    <div className="text-[10px] mt-1 text-[#9E9E9E]">
-                      {order.escrowStatus === 'RELEASED' ? 'Directo al Productor' : 'Pendiente de Inspección'}
+                    <div className="text-[11px] mt-1 text-slate-400">
+                      {order.escrowStatus === 'RELEASED' ? 'Transferido al productor' : 'Pendiente de inspección'}
                     </div>
                   </div>
                 </div>
 
                 {/* Cold Chain Sensor Telemetry Preview */}
                 {order.temperatureLog && order.temperatureLog.length > 0 && (
-                  <div className="bg-[#0E0E0E] border border-[#1E293B] p-3 text-xs font-mono">
-                    <div className="flex items-center justify-between text-[#9E9E9E] mb-2">
-                      <span className="flex items-center gap-1.5 text-[#E5E5E5] font-bold">
-                        <Thermometer className="w-3.5 h-3.5 text-[#FACC15]" strokeWidth={1.5} />
-                        Telemetría del Sensor Térmico IoT en Tránsito:
+                  <div className="bg-[#0B100D] border border-slate-800 rounded-lg p-3 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-slate-400 mb-2">
+                      <span className="flex items-center gap-1.5 text-slate-200 font-medium">
+                        <Thermometer className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />
+                        Registro Térmico en Tránsito:
                       </span>
-                      <span className="text-[#15803D]">RANGO ÓPTIMO: 12.5°C - 14.5°C</span>
+                      <span className="font-mono text-[11px] text-emerald-400">
+                        {getTempStats(order)
+                          ? `Rango registrado: ${getTempStats(order)!.min} °C - ${getTempStats(order)!.max} °C`
+                          : 'Sin registros'}
+                      </span>
                     </div>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {order.temperatureLog.map((t, idx) => (
-                        <div key={idx} className="bg-[#141414] border border-[#262626] px-2.5 py-1 text-[11px]">
-                          <span className="text-[#666666]">{t.time}: </span>
-                          <span className="text-[#15803D] font-bold">{t.tempC}°C</span>
+                        <div key={idx} className="bg-[#161E19] border border-slate-800 rounded px-2.5 py-1 text-[11px] font-mono">
+                          <span className="text-slate-400">{t.time}: </span>
+                          <span className="text-emerald-400 font-semibold">{t.tempC} °C</span>
                         </div>
                       ))}
                     </div>
@@ -177,31 +192,42 @@ export const OrderTracker: React.FC = () => {
 
                 {/* Dispute details if present */}
                 {order.escrowStatus === 'DISPUTED' && (
-                  <div className="p-4 bg-[#F97316]/10 border-2 border-[#F97316] text-xs font-mono space-y-1">
-                    <div className="text-[#F97316] font-bold flex items-center gap-1.5">
-                      <AlertTriangle className="w-4 h-4" strokeWidth={1.5} /> CONTRATO CONGELADO EN DISPUTA
+                  <div className="p-4 bg-red-500/10 border border-red-500/40 rounded-xl text-xs space-y-1">
+                    <div className="text-red-300 font-semibold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4" strokeWidth={1.5} /> Contrato en Revisión / Disputa
                     </div>
-                    <p className="text-[#E5E5E5] font-sans text-xs">{order.disputeReason}</p>
-                    <p className="text-[10px] text-[#9E9E9E]">
-                      El tribunal arbitral de la Cooperativa de Barú y el perito del MIDA están analizando las fotos notarizadas y calibración de campo.
+                    <p className="text-slate-200">{order.disputeReason}</p>
+                    <p className="text-[11px] text-slate-400">
+                      El comité técnico de la Cooperativa de Barú y MIDA están evaluando las evidencias para resolver el reembolso.
                     </p>
                   </div>
                 )}
 
-                {/* Action Toolbar for Escrow Stages */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1E293B]">
-                  <div className="text-[11px] font-mono text-[#666666]">
-                    Hash Contrato: <span className="text-[#7C3AED] font-bold">{truncateHash(order.escrowContractHash, 12)}</span>
+                {/* Action Toolbar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center gap-3">
+                    <div className="text-[11px] font-mono text-slate-500">
+                      Sello: <span className="text-violet-400 font-semibold">{truncateHash(order.escrowContractHash, 12)}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => downloadOrderReceipt([order])}
+                      className="min-h-8 h-auto py-1 px-2.5 text-[11px] flex items-center gap-1"
+                    >
+                      <Download className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>Comprobante</span>
+                    </Button>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {order.escrowStatus === 'FUNDED' && (
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => advanceEscrowStatus(order.id, 'DISPATCHED')}
                       >
-                        [Simular Productor] Despachar Carga
+                        Registrar Despacho de Finca
                       </Button>
                     )}
 
@@ -211,7 +237,7 @@ export const OrderTracker: React.FC = () => {
                         variant="secondary"
                         onClick={() => advanceEscrowStatus(order.id, 'IN_TRANSIT')}
                       >
-                        [Simular Courier] Iniciar Ruta Frigorífica
+                        Iniciar Ruta Refrigerada
                       </Button>
                     )}
 
@@ -221,7 +247,7 @@ export const OrderTracker: React.FC = () => {
                         variant="secondary"
                         onClick={() => advanceEscrowStatus(order.id, 'DELIVERED_PENDING_INSPECTION')}
                       >
-                        [Simular Courier] Entregar en Destino
+                        Confirmar Entrega en Destino
                       </Button>
                     )}
 
@@ -235,7 +261,7 @@ export const OrderTracker: React.FC = () => {
                             setDisputeModalOpen(true);
                           }}
                         >
-                          Reportar Daño / Abrir Disputa
+                          Reportar Problema
                         </Button>
                         <Button
                           size="sm"
@@ -243,8 +269,8 @@ export const OrderTracker: React.FC = () => {
                           onClick={() => handleReleaseEscrow(order.id)}
                           className="flex items-center gap-1.5"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-black" strokeWidth={1.5} />
-                          Aprobar Inspección & Liberar Fondos
+                          <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
+                          Aprobar y Liberar Pago
                         </Button>
                       </>
                     )}
@@ -260,27 +286,27 @@ export const OrderTracker: React.FC = () => {
       <Dialog open={disputeModalOpen} onOpenChange={setDisputeModalOpen}>
         <DialogCloseButton onClose={() => setDisputeModalOpen(false)} />
         <DialogHeader>
-          <DialogTitle className="text-[#F97316] flex items-center gap-2">
+          <DialogTitle className="text-red-400 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" strokeWidth={1.5} />
-            Apertura de Disputa Escrow
+            Reportar Problema y Retener Pago
           </DialogTitle>
           <DialogDescription>
-            Si la carga presenta inconsistencias en peso, calibre o calidad biológica respecto a la bitácora criptográfica, los fondos quedan congelados.
+            Si la carga presenta inconsistencias en peso, calibre o estado de la fruta, los fondos se mantienen retenidos mientras se revisa el caso.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleOpenDispute} className="space-y-4 mt-3">
           <div>
-            <label className="block text-xs font-mono uppercase text-[#9E9E9E] mb-1 font-bold">
-              Motivo Detallado de la Disputa
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              Describe el Motivo de la Reclamación
             </label>
             <textarea
               value={disputeReason}
               onChange={(e) => setDisputeReason(e.target.value)}
               required
               rows={4}
-              placeholder="Ej. El calibre del banano recibido es de 38 mm en lugar de 44 mm especificado en la ficha de corte..."
-              className="w-full bg-[#0E0E0E] border-2 border-[#F97316] p-3 text-xs text-[#E5E5E5] font-mono focus:outline-none"
+              placeholder="Ej. El calibre recibido es menor al especificado o hubo ruptura de temperatura en ruta..."
+              className="w-full rounded-lg bg-[#0B100D] border border-red-500/40 p-3 text-xs text-slate-100 focus:outline-none focus:border-red-400"
             />
           </div>
 
@@ -289,7 +315,7 @@ export const OrderTracker: React.FC = () => {
               Cancelar
             </Button>
             <Button type="submit" variant="destructive">
-              Congelar Contrato & Escalar a Cooperativa
+              Enviar Reclamación
             </Button>
           </div>
         </form>

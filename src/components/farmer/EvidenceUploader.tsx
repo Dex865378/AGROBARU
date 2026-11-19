@@ -70,14 +70,14 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
 
   return (
     <div className="bg-[#121212] border-2 border-[#262626] p-5 space-y-4 shadow-[4px_4px_0px_0px_#1A1A1A]">
-      <div className="flex items-center justify-between border-b border-[#262626] pb-3">
-        <div className="flex items-center gap-2">
-          <Camera className="w-5 h-5 text-[#FF4500]" strokeWidth={1.5} />
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#262626] pb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Camera className="w-5 h-5 text-[#FF4500] shrink-0" strokeWidth={1.5} />
           <h4 className="font-display font-bold text-sm text-[#E5E5E5] uppercase tracking-wide">
             Captura de Evidencia Criptográfica
           </h4>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 bg-[#1A1A1A] text-[#10B981] border border-[#10B981]/30">
+        <span className="text-[10px] font-mono px-2 py-0.5 bg-[#1A1A1A] text-[#10B981] border border-[#10B981]/30 shrink-0">
           GPS STAMP READY
         </span>
       </div>
@@ -92,20 +92,20 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
             <img src={previewSvg} alt="Evidencia Criptográfica Notarizada" className="w-full h-auto object-cover" />
           </div>
           {metadata && (
-            <div className="bg-[#0E0E0E] p-3 border border-[#262626] text-[11px] font-mono space-y-1 text-[#9E9E9E]">
-              <div className="flex justify-between">
+            <div className="bg-[#0E0E0E] p-3 border border-[#262626] text-[11px] font-mono space-y-1.5 text-[#9E9E9E]">
+              <div className="flex flex-wrap justify-between gap-1.5">
                 <span className="text-[#E5E5E5] font-bold">Estado:</span>
                 <span className="text-[#10B981] flex items-center gap-1 font-bold">
-                  <CheckCircle2 className="w-3 h-3" strokeWidth={1.5} /> SELLADO & VERIFICADO
+                  <CheckCircle2 className="w-3 h-3 shrink-0" strokeWidth={1.5} /> SELLADO & VERIFICADO
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
                 <span>Coordenadas:</span>
                 <span className="text-[#E5E5E5]">{metadata.lat.toFixed(6)}° N, {metadata.lng.toFixed(6)}° W</span>
               </div>
-              <div className="flex justify-between">
-                <span>Hash SHA-256:</span>
-                <span className="text-[#FF4500] truncate max-w-[200px]">{calculatedHash}</span>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2">
+                <span className="shrink-0">Hash SHA-256:</span>
+                <span className="text-[#FF4500] break-all sm:truncate sm:max-w-[240px] min-w-0">{calculatedHash}</span>
               </div>
             </div>
           )}

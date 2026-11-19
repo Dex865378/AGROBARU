@@ -11,7 +11,7 @@ export const Dock = ({ className, children }: DockProps) => {
   return (
     <div
       className={cn(
-        "flex h-14 items-center gap-2 bg-[#0E0E0E] p-2 border-2 border-[#15803D] shadow-[4px_4px_0px_0px_#15803D] backdrop-blur-md",
+        "flex h-14 max-w-[calc(100vw-1rem)] items-center justify-center gap-1 sm:gap-2 rounded-2xl bg-[#090D0B]/95 px-2 sm:px-3 py-2 border border-[#1E2E26] shadow-2xl backdrop-blur-md",
         className
       )}
     >
@@ -40,10 +40,10 @@ export const DockIcon = ({
       onClick={onClick}
       title={title}
       className={cn(
-        "relative flex h-10 w-10 items-center justify-center transition-all",
+        "relative flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl transition-all",
         active
-          ? "bg-[#15803D] text-black shadow-[2px_2px_0px_0px_#FACC15] scale-105"
-          : "bg-[#141414] text-[#9E9E9E] border border-[#1E293B] hover:border-[#15803D] hover:text-[#E5E5E5] hover:scale-105",
+          ? "bg-[#10B981] text-[#05100A] shadow-sm scale-105"
+          : "bg-[#111714] text-[#9E9E9E] border border-[#1E2E26] hover:border-[#10B981]/60 hover:text-[#ECFDF5] hover:scale-105",
         className
       )}
     >

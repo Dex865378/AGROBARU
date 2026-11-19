@@ -23,6 +23,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useNotification } from '@/context/NotificationContext';
 import { ChatContact } from '@/components/chat/DirectMessageModal';
 import { ENTERPRISE_DIRECTORY, FARMER_DIRECTORY } from '@/services/directoryData';
+import { SafeImage } from '@/components/ui/SafeImage';
+import { createInitialsAvatarDataUri } from '@/lib/imageFallbacks';
 
 interface ChatMessage {
   id: string;
@@ -55,7 +57,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
     id: 'USR-FARMER-01',
     name: 'Don Dionisio Castillo',
     corregimiento: 'Puerto Armuelles',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    avatar: createInitialsAvatarDataUri('Don Dionisio Castillo'),
     reputation: 99.4,
     phone: '+507 6789-1234'
   };
@@ -68,6 +70,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // All available contacts for the sidebar
   const allContacts: ChatContact[] = [
@@ -85,7 +88,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
       name: e.brandName,
       corregimiento: e.corregimiento,
       avatar: e.avatar,
-      reputation: e.rating * 20,
+      reputation: Math.round(e.rating * 20 * 10) / 10,
       phone: e.phone,
       badge: e.category
     }))
@@ -117,7 +120,11 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
   }, [activeContact.id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Desplaza solo el contenedor de mensajes, nunca la página completa.
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -194,7 +201,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
       </div>
 
       {/* Main WhatsApp-Style Messaging Layout (2 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 border-2 border-[#15803D] bg-[#0A0A0A] shadow-[8px_8px_0px_0px_#15803D] min-h-[680px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 border-2 border-[#15803D] bg-[#0A0A0A] shadow-[8px_8px_0px_0px_#15803D] min-h-[540px]">
         {/* Left Column (4 cols): Contacts & Active Chats Directory */}
         <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#1E293B] bg-[#0E0E0E] flex flex-col">
           {/* Search Contacts Bar */}
@@ -226,10 +233,12 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <img 
-                      src={c.avatar} 
-                      alt={c.name} 
-                      className="w-9 h-9 object-cover border border-[#15803D] shrink-0" 
+                    <SafeImage
+                      src={c.avatar}
+                      alt={c.name}
+                      fallbackType="avatar"
+                      nameHint={c.name}
+                      className="w-9 h-9 object-cover border border-[#15803D] shrink-0"
                     />
                     <div className="min-w-0">
                       <div className="font-bold text-xs text-[#E5E5E5] truncate flex items-center gap-1">
@@ -245,7 +254,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                   <div className="text-right shrink-0">
                     <span className="text-[9px] text-[#FACC15] font-bold flex items-center justify-end gap-1">
                       <ShieldCheck className="w-2.5 h-2.5 text-[#FACC15]" />
-                      {c.reputation || 99}%
+                      {Number(c.reputation || 99).toFixed(1)}%
                     </span>
                     <span className="text-[8px] text-[#666666]">En línea</span>
                   </div>
@@ -256,24 +265,26 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
         </div>
 
         {/* Right Column (8 cols): Active Chat Feed & Input */}
-        <div className="lg:col-span-8 flex flex-col h-full bg-[#0A0A0A]/95">
+        <div className="lg:col-span-8 flex flex-col h-full bg-[#0A0A0A]/95 border-t lg:border-t-0 border-[#1E293B]">
           {/* Active Contact Header */}
-          <div className="bg-[#121212] border-b border-[#1E293B] p-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <img 
-                src={activeContact.avatar} 
-                alt={activeContact.name} 
-                className="w-10 h-10 object-cover border-2 border-[#15803D] shrink-0" 
+          <div className="bg-[#121212] border-b border-[#1E293B] p-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <SafeImage
+                src={activeContact.avatar}
+                alt={activeContact.name}
+                fallbackType="avatar"
+                nameHint={activeContact.name}
+                className="w-10 h-10 object-cover border-2 border-[#15803D] shrink-0"
               />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-display font-black text-sm text-[#E5E5E5] truncate">
                     {activeContact.name}
                   </h3>
-                  <Badge variant="live-green" className="text-[8px] py-0">Activo</Badge>
+                  <Badge variant="live-green" className="text-[8px] py-0 shrink-0">Activo</Badge>
                 </div>
                 <p className="text-[10px] text-[#9E9E9E] truncate">
-                  {activeContact.corregimiento} • Reputación MIDA: <strong className="text-[#FACC15]">{activeContact.reputation || 99.4}%</strong>
+                  {activeContact.corregimiento} • Reputación MIDA: <strong className="text-[#FACC15]">{Number(activeContact.reputation || 99.4).toFixed(1)}%</strong>
                 </p>
               </div>
             </div>
@@ -287,7 +298,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
           </div>
 
           {/* Messages Feed */}
-          <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[500px] min-h-[420px] bg-[#0A0A0A] text-xs">
+          <div ref={messagesContainerRef} className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[500px] min-h-[300px] bg-[#0A0A0A] text-xs">
             <div className="text-center my-1">
               <span className="bg-[#141414] text-[#9E9E9E] px-3 py-1 text-[10px] border border-[#1E293B] inline-flex items-center gap-1.5">
                 <ShieldCheck className="w-3 h-3 text-[#15803D]" />
@@ -319,7 +330,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
 
                   {msg.imageUrl && (
                     <div className="mt-2 border border-[#1E293B] overflow-hidden max-w-xs">
-                      <img src={msg.imageUrl} alt="Adjunto" className="w-full h-auto object-cover" />
+                      <SafeImage src={msg.imageUrl} alt="Adjunto" fallbackType="product" className="w-full h-auto object-cover" />
                     </div>
                   )}
 
@@ -336,23 +347,23 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
           </div>
 
           {/* Quick Pre-filled Questions for Buyers */}
-          <div className="px-4 py-1.5 bg-[#0E0E0E] border-t border-[#1E293B] flex items-center gap-2 overflow-x-auto text-[10px]">
+          <div className="px-4 py-1.5 bg-[#0E0E0E] border-t border-[#1E293B] flex flex-wrap items-center gap-2 text-[10px]">
             <span className="text-[#666666] shrink-0">Consultas Rápidas:</span>
             <button
               onClick={() => setInputText(`Hola ${activeContact.name.split(' ')[0]}, ¿tiene disponibilidad de 500 cajas para la próxima semana?`)}
-              className="px-2.5 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5] shrink-0"
+              className="px-2.5 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5] whitespace-nowrap"
             >
               Consultar 500 cajas
             </button>
             <button
               onClick={() => setInputText(`Buenas tardes, me gustaría solicitar una muestra courier de 18 kg para inspección.`)}
-              className="px-2.5 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5] shrink-0"
+              className="px-2.5 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5] whitespace-nowrap"
             >
               Pedir Muestra (18 kg)
             </button>
             <button
               onClick={() => setInputText(`¿Qué certificaciones fitosanitarias MIDA tiene vigentes este lote?`)}
-              className="px-2.5 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5] shrink-0"
+              className="px-2.5 py-0.5 bg-[#141414] hover:bg-[#1A1A1A] border border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5] whitespace-nowrap"
             >
               Certificados MIDA
             </button>
@@ -362,7 +373,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
           {attachedImage && (
             <div className="bg-[#141414] border-t border-[#15803D] p-2 flex items-center justify-between text-xs px-4">
               <div className="flex items-center gap-2">
-                <img src={attachedImage} alt="Preview" className="w-8 h-8 object-cover border border-[#15803D]" />
+                <SafeImage src={attachedImage} alt="Preview" fallbackType="product" className="w-8 h-8 object-cover border border-[#15803D]" />
                 <span className="text-[10px] text-[#15803D]">Foto adjunta lista para enviar</span>
               </div>
               <button onClick={() => setAttachedImage(null)} className="text-[#F97316] hover:text-white text-xs">

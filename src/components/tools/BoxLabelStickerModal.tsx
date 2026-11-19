@@ -15,6 +15,7 @@ import { ProductBatch } from '@/types';
 import { useLanguage } from '@/context/LanguageContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { getBatchTraceUrl } from '@/lib/qrUtils';
+import { formatDateOnly } from '@/lib/utils';
 
 interface BoxLabelStickerModalProps {
   open: boolean;
@@ -58,7 +59,7 @@ export const BoxLabelStickerModal: React.FC<BoxLabelStickerModalProps> = ({
           {/* Label Header */}
           <div className="border-b-4 border-black pb-2 flex items-center justify-between">
             <div>
-              <div className="font-display font-black text-xl tracking-tight leading-none">
+              <div className="font-display font-black text-xl tracking-normal leading-snug">
                 AGROBARÚ
               </div>
               <div className="text-[8px] font-bold tracking-widest uppercase">
@@ -75,7 +76,7 @@ export const BoxLabelStickerModal: React.FC<BoxLabelStickerModalProps> = ({
 
           {/* Fruit Details */}
           <div className="my-3 space-y-1">
-            <div className="text-lg font-black uppercase leading-tight font-display">
+            <div className="text-lg font-black uppercase leading-snug font-display">
               {batch.cropName} // {batch.variety}
             </div>
             <div className="text-[10px] font-bold flex items-center gap-1">
@@ -86,7 +87,7 @@ export const BoxLabelStickerModal: React.FC<BoxLabelStickerModalProps> = ({
               <span className="font-bold">FINCA:</span> {batch.farmName} | <span className="font-bold">PROD:</span> {batch.producerName}
             </div>
             <div className="text-[9px]">
-              <span className="font-bold">FECHA CORTE:</span> {batch.harvestDate} | <span className="font-bold">CALIBRE:</span> 39-46
+              <span className="font-bold">FECHA CORTE:</span> {formatDateOnly(batch.harvestDate)} | <span className="font-bold">CALIBRE:</span> 39-46
             </div>
           </div>
 

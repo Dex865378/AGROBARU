@@ -23,57 +23,54 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 
 function Badge({ className, variant = "default", pulse = false, children, ...props }: BadgeProps) {
   const variants = {
-    default: "bg-[#15803D]/15 text-[#15803D] border-[#15803D]",
-    purple: "bg-[#7C3AED]/15 text-[#7C3AED] border-[#7C3AED]",
-    yellow: "bg-[#FACC15]/15 text-[#FACC15] border-[#FACC15]",
-    orange: "bg-[#F97316]/15 text-[#F97316] border-[#F97316]",
-    secondary: "bg-[#141414] text-[#9E9E9E] border-[#262626]",
-    destructive: "bg-[#F97316]/15 text-[#F97316] border-[#F97316]",
-    success: "bg-[#15803D]/20 text-[#15803D] border-[#15803D]",
-    warning: "bg-[#FACC15]/20 text-[#FACC15] border-[#FACC15]",
-    outline: "bg-transparent text-[#E5E5E5] border-[#15803D]",
-    'live-green': "bg-[#15803D]/20 text-[#22C55E] border-[#15803D] shadow-[0_0_8px_rgba(21,128,61,0.3)]",
-    'live-yellow': "bg-[#FACC15]/20 text-[#FACC15] border-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.3)]",
-    'live-purple': "bg-[#7C3AED]/20 text-[#A78BFA] border-[#7C3AED] shadow-[0_0_8px_rgba(124,58,237,0.3)]",
-    'live-orange': "bg-[#F97316]/20 text-[#FB923C] border-[#F97316] shadow-[0_0_8px_rgba(249,115,22,0.3)]",
-    'phyto-certified': "bg-[#15803D]/25 text-[#4ADE80] border-[#15803D] font-black",
-    'escrow-locked': "bg-[#7C3AED]/25 text-[#C084FC] border-[#7C3AED] font-black",
+    default: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    purple: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+    yellow: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    orange: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+    secondary: "bg-slate-800/80 text-slate-300 border-slate-700",
+    destructive: "bg-red-500/15 text-red-300 border-red-500/35",
+    success: "bg-emerald-500/15 text-emerald-300 border-emerald-500/35",
+    warning: "bg-amber-500/15 text-amber-300 border-amber-500/35",
+    outline: "bg-transparent text-slate-300 border-slate-700",
+    'live-green': "bg-emerald-500/15 text-emerald-300 border-emerald-500/35",
+    'live-yellow': "bg-amber-500/15 text-amber-300 border-amber-500/35",
+    'live-purple': "bg-violet-500/15 text-violet-300 border-violet-500/35",
+    'live-orange': "bg-orange-500/15 text-orange-300 border-orange-500/35",
+    'phyto-certified': "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold",
+    'escrow-locked': "bg-violet-500/20 text-violet-300 border-violet-500/40 font-semibold",
   }
 
   const dotColors = {
-    default: "bg-[#15803D]",
-    purple: "bg-[#7C3AED]",
-    yellow: "bg-[#FACC15]",
-    orange: "bg-[#F97316]",
-    secondary: "bg-[#9E9E9E]",
-    destructive: "bg-[#F97316]",
-    success: "bg-[#15803D]",
-    warning: "bg-[#FACC15]",
-    outline: "bg-[#15803D]",
-    'live-green': "bg-[#22C55E]",
-    'live-yellow': "bg-[#FACC15]",
-    'live-purple': "bg-[#A78BFA]",
-    'live-orange': "bg-[#FB923C]",
-    'phyto-certified': "bg-[#4ADE80]",
-    'escrow-locked': "bg-[#C084FC]",
+    default: "bg-emerald-400",
+    purple: "bg-violet-400",
+    yellow: "bg-amber-400",
+    orange: "bg-orange-400",
+    secondary: "bg-slate-400",
+    destructive: "bg-red-400",
+    success: "bg-emerald-400",
+    warning: "bg-amber-400",
+    outline: "bg-emerald-400",
+    'live-green': "bg-emerald-400",
+    'live-yellow': "bg-amber-400",
+    'live-purple': "bg-violet-400",
+    'live-orange': "bg-orange-400",
+    'phyto-certified': "bg-emerald-400",
+    'escrow-locked': "bg-violet-400",
   }
 
-  const shouldPulse = pulse || variant.startsWith('live-');
+  const showDot = pulse || variant.startsWith('live-');
 
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider border transition-colors",
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-sans font-medium leading-snug tracking-normal border transition-colors",
         variants[variant],
         className
       )}
       {...props}
     >
-      {shouldPulse && (
-        <span className="relative flex h-2 w-2">
-          <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", dotColors[variant])}></span>
-          <span className={cn("relative inline-flex rounded-full h-2 w-2", dotColors[variant])}></span>
-        </span>
+      {showDot && (
+        <span className={cn("inline-flex rounded-full h-1.5 w-1.5 shrink-0", dotColors[variant])} />
       )}
       {children}
     </div>

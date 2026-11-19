@@ -19,7 +19,7 @@ export function calculateReputationTier(
   if (score >= 98 && successfulTrades >= 8) {
     return {
       tier: 'DIAMOND_MIDA',
-      label: 'DIAMANTE MIDA // AUDITOR SUPREMO',
+      label: 'DIAMANTE MIDA // PRODUCTOR ÉLITE',
       badgeColor: '#15803D',
       nameGlowClass: 'text-[#15803D] drop-shadow-[0_0_8px_#15803D] font-black',
       avatarBorderClass: 'border-2 border-[#15803D] shadow-[0_0_15px_#15803D] ring-2 ring-[#FACC15] ring-offset-2 ring-offset-black animate-pulse',
@@ -51,7 +51,7 @@ export function calculateReputationTier(
 
   return {
     tier: 'BRONZE',
-    label: 'RANGO BRONCE // NUEVO INGRESO',
+    label: 'RANGO BRONCE // NUEVO PRODUCTOR',
     badgeColor: '#F97316',
     nameGlowClass: 'text-[#F97316]',
     avatarBorderClass: 'border border-[#F97316]',

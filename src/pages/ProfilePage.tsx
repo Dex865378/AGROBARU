@@ -30,6 +30,7 @@ import { saveDocument, COLLECTIONS } from '@/services/firebase';
 import { UserProfile } from '@/types';
 import { Spotlight } from '@/components/aceternity/Spotlight';
 import { BorderBeam } from '@/components/magicui/BorderBeam';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 interface ProfilePageProps {
   onBack: () => void;
@@ -119,14 +120,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   return (
     <div className="space-y-8 py-6 max-w-5xl mx-auto font-mono">
       {/* Top Navigation Bar: Back to Home */}
-      <div className="flex items-center justify-between border-b-2 border-[#15803D] pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#15803D] pb-4">
         <Button
           onClick={onBack}
           variant="outline"
           className="flex items-center gap-2 text-xs text-[#E5E5E5] hover:text-black hover:bg-[#15803D] border-[#15803D]"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{language === 'en' ? '← Back to Home / Dashboard' : '← Volver al Inicio del Sitio'}</span>
+          <span>{language === 'en' ? 'Back to Home / Dashboard' : 'Volver al Inicio del Sitio'}</span>
         </Button>
 
         <div className="flex items-center gap-2 text-xs">
@@ -146,11 +147,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
           {/* Avatar with Glow Aura & Camera upload */}
           <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
             <div className={`w-32 h-32 bg-[#141414] overflow-hidden flex items-center justify-center transition-all ${tierInfo.avatarBorderClass}`}>
-              {photoURL ? (
-                <img src={photoURL} alt={name} className="w-full h-full object-cover" />
-              ) : (
-                <UserIcon className="w-16 h-16 text-[#15803D]" />
-              )}
+              <SafeImage
+                src={photoURL}
+                alt={name}
+                fallbackType="avatar"
+                nameHint={name}
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-xs font-bold">
               <Camera className="w-6 h-6 mb-1 text-[#FACC15]" />
@@ -168,7 +171,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
           {/* User Details & Reputation Overview */}
           <div className="flex-1 text-center md:text-left space-y-3">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-              <h1 className={`text-2xl sm:text-3xl uppercase font-display font-black tracking-tight ${tierInfo.nameGlowClass}`}>
+              <h1 className={`text-2xl sm:text-3xl uppercase font-display font-bold leading-snug tracking-normal ${tierInfo.nameGlowClass}`}>
                 {name || 'Productor Barú'}
               </h1>
               {username && (
@@ -194,7 +197,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
 
             {/* Level Bar */}
             <div className="pt-2 max-w-md mx-auto md:mx-0">
-              <div className="flex justify-between text-[10px] text-[#9E9E9E] mb-1">
+              <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-[10px] text-[#9E9E9E] mb-1">
                 <span>Puntuación de Prestigio Comercial</span>
                 <span className="text-[#FACC15] font-bold">{currentUser.reputationScore || 99.4}% Confianza</span>
               </div>
@@ -216,7 +219,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
           <div className="text-2xl font-display font-black text-[#15803D] mt-1">
             {currentUser.reputationScore || 99.4}%
           </div>
-          <div className="text-[9px] text-[#15803D]">Calificación 4.95 ⭐</div>
+          <div className="text-[9px] text-[#15803D]">Calificación 4.95 ★</div>
         </div>
 
         <div className="bg-[#0E0E0E] border-2 border-[#FACC15] p-4 shadow-[3px_3px_0px_0px_#FACC15]">
@@ -236,7 +239,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         </div>
 
         <div className="bg-[#0E0E0E] border-2 border-[#1E293B] p-4">
-          <div className="text-[10px] text-[#666666] uppercase font-bold">Antigüedad Red</div>
+          <div className="text-[10px] text-[#666666] uppercase font-bold">Miembro Desde</div>
           <div className="text-2xl font-display font-black text-[#E5E5E5] mt-1">
             {currentUser.memberSince || '2026'}
           </div>
