@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { ProfileBanner } from '@/components/profile/ProfileBanner';
 import { useAppState } from '@/context/AppStateContext';
 import { useNotification } from '@/context/NotificationContext';
 import { ProductBatch, UserProfile } from '@/types';
@@ -282,29 +283,16 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
       <DialogCloseButton onClose={onClose} />
 
       {/* Banner largo detrás del avatar (estilo WhatsApp Business) */}
-      <div className="relative -mx-5 -mt-5 h-28 sm:h-36 overflow-hidden bg-[#0A0A0A]">
-        {fallbackBanner ? (
-          <div
-            role="img"
-            aria-label={`Portada de ${profile.name}`}
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url("${fallbackBanner}")`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-          />
-        ) : (
-          <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_30%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#111714] via-black/20 to-black/10" />
-        <div className="absolute top-2 left-2 font-mono text-[8px] uppercase tracking-wider text-white/75 bg-black/55 border border-white/15 px-1.5 py-0.5">
+      <ProfileBanner
+        src={fallbackBanner}
+        alt={`Portada de ${profile.name}`}
+        className="-mx-5 -mt-5"
+      >
+        <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-[#111714] via-black/20 to-black/10" />
+        <div className="absolute left-2 top-2 z-30 border border-white/15 bg-black/55 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-wider text-white/75">
           {profile.isOwn ? 'Tu portada' : 'Portada pública'}
         </div>
-      </div>
+      </ProfileBanner>
 
       {/* Avatar y datos principales */}
       <div className="relative -mt-10 flex items-end gap-3 text-left">

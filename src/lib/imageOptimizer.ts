@@ -367,84 +367,14 @@ export async function optimizeImage(
   };
 }
 
-/**
- * Rota un banner ya guardado y vuelve a recortarlo a 3:1. Sirve para corregir
- * fotos que traen una orientación EXIF dañada o que fueron tomadas de lado.
- */
-export async function rotateBannerImage(
-  dataUrl: string,
-  degrees = -90,
-): Promise<string> {
-  const image = await loadImageSource(dataUrl);
-  const radians = (degrees * Math.PI) / 180;
-  const swaps = Math.abs(degrees) % 180 === 90;
-  const rotatedWidth = swaps ? image.naturalHeight : image.naturalWidth;
-  const rotatedHeight = swaps ? image.naturalWidth : image.naturalHeight;
-
-  const rotated = document.createElement('canvas');
-  rotated.width = rotatedWidth;
-  rotated.height = rotatedHeight;
-  const rotatedContext = rotated.getContext('2d', { alpha: false });
-  if (!rotatedContext) throw new Error('El navegador no pudo rotar la imagen.');
-  rotatedContext.fillStyle = '#0A0A0A';
-  rotatedContext.fillRect(0, 0, rotatedWidth, rotatedHeight);
-  rotatedContext.translate(rotatedWidth / 2, rotatedHeight / 2);
-  rotatedContext.rotate(radians);
-  rotatedContext.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
-
-  const cropAspect = 3;
-  let sourceWidth = rotatedWidth;
-  let sourceHeight = Math.round(rotatedWidth / cropAspect);
-  if (sourceHeight > rotatedHeight) {
-    sourceHeight = rotatedHeight;
-    sourceWidth = Math.round(rotatedHeight * cropAspect);
-  }
-  const sourceX = Math.round((rotatedWidth - sourceWidth) / 2);
-  const sourceY = Math.round((rotatedHeight - sourceHeight) / 2);
-  const scale = Math.min(1, 1600 / sourceWidth, 640 / sourceHeight);
-  const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
-  const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
-
-  const output = document.createElement('canvas');
-  output.width = targetWidth;
-  output.height = targetHeight;
-  const outputContext = output.getContext('2d', { alpha: false });
-  if (!outputContext) throw new Error('El navegador no pudo rotar la imagen.');
-  outputContext.imageSmoothingEnabled = true;
-  outputContext.imageSmoothingQuality = 'high';
-  outputContext.fillStyle = '#0A0A0A';
-  outputContext.fillRect(0, 0, targetWidth, targetHeight);
-  outputContext.drawImage(
-    rotated,
-    sourceX,
-    sourceY,
-    sourceWidth,
-    sourceHeight,
-    0,
-    0,
-    targetWidth,
-    targetHeight,
-  );
-
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    output.toBlob(
-      (result) => (result ? resolve(result) : reject(new Error('No se pudo rotar el banner.'))),
-      'image/jpeg',
-      0.82,
-    );
-  });
-  return blobToDataUrl(blob);
-}
-
 export const optimizeAvatar = (file: File) =>
   optimizeImage(file, { maxWidth: 420, maxHeight: 420, quality: 0.84, cropAspect: 1 });
 
 export const optimizeBanner = (file: File) =>
   optimizeImage(file, {
     maxWidth: 1600,
-    maxHeight: 640,
-    quality: 0.8,
-    cropAspect: 3,
+    maxHeight: 1600,
+    quality: 0.82,
     preserveAnimation: true,
     maxAnimatedBytes: 600 * 1024,
   });
