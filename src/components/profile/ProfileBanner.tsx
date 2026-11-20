@@ -34,15 +34,10 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
     <div
       className={`relative h-36 overflow-hidden bg-[#0A0A0A] sm:h-52 ${className}`}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-40 blur-2xl"
-        style={{ backgroundImage: `url("${src}")` }}
-      />
       <img
         src={src}
         alt={alt}
-        className="absolute inset-0 z-10 h-full w-full object-contain"
+        className="absolute inset-0 z-10 h-full w-full object-cover object-center"
       />
       {children}
     </div>
