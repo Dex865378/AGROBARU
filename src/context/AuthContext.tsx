@@ -349,8 +349,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           { ...patch, updatedAt: now },
           { merge: true },
         );
-        // Mantener sincronizado el perfil del entorno completo (foto, portada
-        // y nombre) para que no se pierda al abrir Mi Cuenta.
+      } catch (error) {
+        setProfile(previousProfile);
+        throw error;
+      }
+
+      // Mantener sincronizado el perfil del entorno completo (foto, portada
+      // y nombre). Si falla la copia heredada no se revierte la cuenta.
+      try {
         const legacyRef = doc(db, 'agrobaru_users', user.uid);
         const legacySnapshot = await getDoc(legacyRef);
         if (legacySnapshot.exists()) {
@@ -363,8 +369,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch (error) {
-        setProfile(previousProfile);
-        throw error;
+        console.warn('[AgroBarú Auth] No se pudo sincronizar el perfil heredado:', error);
       }
     },
     [profile, user],
