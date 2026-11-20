@@ -194,7 +194,7 @@ export const ProfilePage: React.FC = () => {
           </ProfileBanner>
 
           <div className="px-4 sm:px-5 pb-5">
-            <div className="-mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+            <div className="relative z-30 -mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => document.getElementById('profile-avatar-input')?.click()}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface ProfileBannerProps {
   src?: string | null;
@@ -21,9 +21,6 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
   className = '',
   children,
 }) => {
-  const [isPortrait, setIsPortrait] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<string | undefined>(undefined);
-
   if (!src) {
     return (
       <div className={`relative overflow-hidden bg-[#0A0A0A] ${className}`}>
@@ -35,10 +32,7 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
 
   return (
     <div
-      className={`relative overflow-hidden bg-[#0A0A0A] ${
-        isPortrait ? 'h-44 sm:h-60' : 'max-h-[600px]'
-      } ${className}`}
-      style={!isPortrait && aspectRatio ? { aspectRatio } : undefined}
+      className={`relative h-36 overflow-hidden bg-[#0A0A0A] sm:h-52 ${className}`}
     >
       <div
         aria-hidden="true"
@@ -48,14 +42,6 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
       <img
         src={src}
         alt={alt}
-        onLoad={(event) => {
-          const image = event.currentTarget;
-          const portrait = image.naturalHeight > image.naturalWidth;
-          setIsPortrait(portrait);
-          setAspectRatio(
-            portrait ? undefined : `${image.naturalWidth} / ${image.naturalHeight}`,
-          );
-        }}
         className="absolute inset-0 z-10 h-full w-full object-contain"
       />
       {children}

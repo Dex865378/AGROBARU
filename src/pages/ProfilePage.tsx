@@ -243,7 +243,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         </ProfileBanner>
 
         <div className="px-4 pb-4">
-          <div className="relative -mt-10 sm:-mt-12 flex flex-wrap items-end gap-3">
+          <div className="relative z-30 -mt-10 sm:-mt-12 flex flex-wrap items-end gap-3">
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}

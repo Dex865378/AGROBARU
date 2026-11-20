@@ -295,7 +295,7 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
       </ProfileBanner>
 
       {/* Avatar y datos principales */}
-      <div className="relative -mt-10 flex items-end gap-3 text-left">
+      <div className="relative z-30 -mt-10 flex items-end gap-3 text-left">
         <div className={`w-[76px] h-[76px] shrink-0 overflow-hidden bg-[#141414] ${tier.avatarBorderClass}`}>
           <SafeImage
             src={profile.avatar}
