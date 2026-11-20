@@ -185,12 +185,18 @@ export const ProfilePage: React.FC = () => {
         <section className="overflow-hidden rounded-2xl border border-[#1E2E26] bg-[#111714]">
           <div className="relative h-28 sm:h-36 bg-[#0A0A0A]">
             {bannerUrl ? (
-              <img
-                src={bannerUrl}
-                alt={`Portada de ${profile?.name || 'AgroBarú'}`}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
-                referrerPolicy="no-referrer"
+              <div
+                role="img"
+                aria-label={`Portada de ${profile?.name || 'AgroBarú'}`}
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundImage: `url("${bannerUrl}")`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                }}
               />
             ) : (
               <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_30%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />

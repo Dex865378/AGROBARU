@@ -284,13 +284,18 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
       {/* Banner largo detrás del avatar (estilo WhatsApp Business) */}
       <div className="relative -mx-5 -mt-5 h-28 sm:h-36 overflow-hidden bg-[#0A0A0A]">
         {fallbackBanner ? (
-          <SafeImage
-            src={fallbackBanner}
-            alt={`Portada de ${profile.name}`}
-            fallbackType="product"
-            cropHint={producerBatches[0]?.cropName}
-            className="absolute inset-0 w-full h-full object-cover object-center"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+          <div
+            role="img"
+            aria-label={`Portada de ${profile.name}`}
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url("${fallbackBanner}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
           />
         ) : (
           <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_30%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />

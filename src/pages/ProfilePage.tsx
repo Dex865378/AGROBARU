@@ -223,13 +223,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       <div className="relative overflow-hidden border-2 border-[#15803D] bg-[#0E0E0E] shadow-[4px_4px_0px_0px_#15803D]">
         <div className="relative h-28 sm:h-40 bg-[#0A0A0A] overflow-hidden">
           {bannerURL ? (
-            <SafeImage
-              src={bannerURL}
-              alt={`Portada de ${name}`}
-              fallbackType="product"
-              cropHint={myBatches[0]?.cropName}
-              className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+            <div
+              role="img"
+              aria-label={`Portada de ${name}`}
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url("${bannerURL}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
             />
           ) : (
             <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_25%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />
