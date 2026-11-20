@@ -475,6 +475,9 @@ export const CommunityAndAlerts: React.FC = () => {
                   <h3 className="font-display font-black text-sm text-[#E5E5E5] truncate uppercase">
                     {activeGroup.name}
                   </h3>
+                  <Badge variant="live-green" className="text-[8px] py-0 px-1 flex items-center gap-0.5 shrink-0">
+                    En vivo
+                  </Badge>
                   {activeGroup.temporalMessagesDuration !== 'OFF' && (
                     <Badge variant="yellow" className="text-[8px] py-0 px-1 flex items-center gap-0.5 shrink-0">
                       <Timer className="w-2.5 h-2.5" />
