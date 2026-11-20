@@ -95,9 +95,30 @@ export async function optimizeImage(
   // Deja que el navegador pinte la vista previa antes del trabajo pesado.
   await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
-  const image = await loadImage(file);
-  const naturalWidth = image.naturalWidth || image.width;
-  const naturalHeight = image.naturalHeight || image.height;
+  // `createImageBitmap` respeta la orientación EXIF de las fotos tomadas con
+  // el teléfono, evitando que un banner horizontal salga girado o vertical.
+  let bitmap: ImageBitmap | null = null;
+  let source: CanvasImageSource | null = null;
+  let naturalWidth = 0;
+  let naturalHeight = 0;
+
+  try {
+    if (typeof createImageBitmap === 'function') {
+      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      source = bitmap;
+      naturalWidth = bitmap.width;
+      naturalHeight = bitmap.height;
+    }
+  } catch {
+    bitmap = null;
+  }
+
+  if (!source) {
+    const image = await loadImage(file);
+    source = image;
+    naturalWidth = image.naturalWidth || image.width;
+    naturalHeight = image.naturalHeight || image.height;
+  }
 
   let sourceX = 0;
   let sourceY = 0;
@@ -135,7 +156,7 @@ export async function optimizeImage(
   context.fillStyle = '#0A0A0A';
   context.fillRect(0, 0, targetWidth, targetHeight);
   context.drawImage(
-    image,
+    source,
     sourceX,
     sourceY,
     sourceWidth,
@@ -157,6 +178,7 @@ export async function optimizeImage(
     );
   });
 
+  bitmap?.close();
   const dataUrl = await blobToDataUrl(blob);
   return {
     dataUrl,

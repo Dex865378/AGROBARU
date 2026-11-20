@@ -228,7 +228,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
               alt={`Portada de ${name}`}
               fallbackType="product"
               cropHint={myBatches[0]?.cropName}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
             />
           ) : (
             <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_25%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />

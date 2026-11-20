@@ -188,7 +188,8 @@ export const ProfilePage: React.FC = () => {
               <img
                 src={bannerUrl}
                 alt={`Portada de ${profile?.name || 'AgroBarú'}`}
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
                 referrerPolicy="no-referrer"
               />
             ) : (
