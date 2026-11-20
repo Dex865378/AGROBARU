@@ -181,7 +181,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </button>
 
-              {!roleLocked && (
+              {roleLocked ? (
+                <Link
+                  to="/perfil"
+                  className="text-[#FACC15] hover:text-white px-1.5 py-0.5 text-[9px] font-bold border border-[#FACC15]/30 hover:border-[#FACC15] rounded transition-colors"
+                  title="Mi cuenta, rol y seguridad"
+                >
+                  Mi cuenta
+                </Link>
+              ) : (
                 <button
                   onClick={() => openAccountChooser()}
                   className="text-[#FACC15] hover:text-white px-1.5 py-0.5 text-[9px] font-bold border border-[#FACC15]/30 hover:border-[#FACC15] rounded transition-colors"
