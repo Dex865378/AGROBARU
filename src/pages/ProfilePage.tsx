@@ -135,7 +135,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     setPhotoURL(preview);
     // La vista previa aparece al instante; la compresión termina en segundo plano.
     processAvatarUpload(file)
-      .then((optimized) => setPhotoURL((current) => (current === preview ? optimized : current)))
+      .then(async (optimized) => {
+        setPhotoURL((current) => (current === preview ? optimized : current));
+        await updateUserProfile({ photoURL: optimized });
+      })
       .catch((err: Error) => error('Imagen no válida', err.message))
       .finally(() => URL.revokeObjectURL(preview));
     event.target.value = '';
@@ -147,7 +150,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     const preview = URL.createObjectURL(file);
     setBannerURL(preview);
     optimizeBanner(file)
-      .then((optimized) => setBannerURL((current) => (current === preview ? optimized.dataUrl : current)))
+      .then(async (optimized) => {
+        setBannerURL((current) => (current === preview ? optimized.dataUrl : current));
+        await updateUserProfile({ bannerURL: optimized.dataUrl });
+      })
       .catch((err: Error) => warning('Banner no válido', err.message))
       .finally(() => URL.revokeObjectURL(preview));
     event.target.value = '';

@@ -101,7 +101,10 @@ export const ProfilePage: React.FC = () => {
     const preview = URL.createObjectURL(file);
     setPhotoUrl(preview);
     optimizeAvatar(file)
-      .then((optimized) => setPhotoUrl((current) => (current === preview ? optimized.dataUrl : current)))
+      .then(async (optimized) => {
+        setPhotoUrl((current) => (current === preview ? optimized.dataUrl : current));
+        await updateProfileData({ photoURL: optimized.dataUrl });
+      })
       .catch(() => setError('No se pudo procesar la foto de perfil.'))
       .finally(() => URL.revokeObjectURL(preview));
     event.target.value = '';
@@ -113,7 +116,10 @@ export const ProfilePage: React.FC = () => {
     const preview = URL.createObjectURL(file);
     setBannerUrl(preview);
     optimizeBanner(file)
-      .then((optimized) => setBannerUrl((current) => (current === preview ? optimized.dataUrl : current)))
+      .then(async (optimized) => {
+        setBannerUrl((current) => (current === preview ? optimized.dataUrl : current));
+        await updateProfileData({ bannerUrl: optimized.dataUrl });
+      })
       .catch(() => setError('No se pudo procesar el banner. Usa una imagen más liviana.'))
       .finally(() => URL.revokeObjectURL(preview));
     event.target.value = '';
