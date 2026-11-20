@@ -7,8 +7,8 @@
 | `/login` | Público | Correo/contraseña, Google, recuperar contraseña |
 | `/registro` | Público | Nombre completo, comunidad de Barú, correo y contraseña |
 | `/seleccionar-rol` | Autenticado sin rol | Puerta obligatoria: Productor Agrícola o Comprador-Consumidor |
-| `/productor` | Rol `productor` | CRUD de cosechas propias (`producerId == uid`) |
-| `/mercado` | Rol `consumidor` | Catálogo de solo lectura + pedido Escrow |
+| `/productor` | Rol `productor` | Interfaz completa, sección de productor (Bitácora y publicación) |
+| `/mercado` | Rol `consumidor` | Interfaz completa, catálogo y pedido Escrow |
 | `/perfil` | Autenticado | Cuenta, UID, cambio de rol y cierre de sesión |
 | `/` y `/trace/*` | Público | Sitio institucional existente (prototipo) |
 
@@ -19,6 +19,7 @@
 - Sitio público: `/sitio`. Trazabilidad QR: `/trace/*`.
 - Reglas de Firestore publicadas en `mapache-4ab0f`.
 - **Correo electrónico/Contraseña** y **Google** habilitados.
+- Tras elegir rol se carga la interfaz completa original; el selector de rol y el cambio de cuenta simulado quedan ocultos.
 - Dominios autorizados: `localhost`, `mapache-4ab0f.firebaseapp.com`,
   `mapache-4ab0f.web.app`, `agrobaru.com` y `www.agrobaru.com`.
   El dominio `agrobaru.com` aún no está conectado al Hosting; la URL activa es

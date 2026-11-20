@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { AppStateProvider, useAppState } from '@/context/AppStateContext';
+import type { UserRole } from '@/types';
 import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -96,9 +97,12 @@ const CalculatorView: React.FC = () => {
   );
 };
 
-const MainLayout: React.FC = () => {
+const MainLayout: React.FC<{ roleLocked?: boolean; initialTab?: string }> = ({
+  roleLocked,
+  initialTab = 'home',
+}) => {
   const { cart } = useAppState();
-  const [activeTab, setActiveTab] = useState<string>('home');
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [marketplaceSubTab, setMarketplaceSubTab] = useState<'catalog' | 'orders'>('catalog');
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [selectedBatchCodeForTrace, setSelectedBatchCodeForTrace] = useState<string>('AGRO-BARU-2026-CAV-089');
@@ -286,6 +290,7 @@ const MainLayout: React.FC = () => {
         unreadCount={unreadNotifications}
         cartCount={cart.length}
         onOpenCart={() => setIsCartOpen(true)}
+        roleLocked={roleLocked}
       />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 flex-1 w-full min-w-0 pb-8 md:pb-12 overflow-x-hidden">
@@ -468,12 +473,20 @@ const MainLayout: React.FC = () => {
   );
 };
 
-export function App() {
+export function App({
+  initialRole,
+  roleLocked = false,
+  initialTab = 'home',
+}: {
+  initialRole?: UserRole;
+  roleLocked?: boolean;
+  initialTab?: string;
+} = {}) {
   return (
     <NotificationProvider>
       <LanguageProvider>
-        <AppStateProvider>
-          <MainLayout />
+        <AppStateProvider initialRole={initialRole}>
+          <MainLayout roleLocked={roleLocked} initialTab={initialTab} />
         </AppStateProvider>
       </LanguageProvider>
     </NotificationProvider>

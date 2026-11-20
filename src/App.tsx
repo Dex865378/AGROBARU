@@ -12,8 +12,6 @@ import {
 } from '@/components/routing/RouteGuards';
 import { AuthPage } from '@/pages/auth/AuthPage';
 import { RoleSelectionPage } from '@/pages/onboarding/RoleSelectionPage';
-import { ProducerDashboard } from '@/pages/producer/ProducerDashboard';
-import { ConsumerMarketplace } from '@/pages/consumer/ConsumerMarketplace';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { registerServiceWorker } from '@/lib/registerServiceWorker';
 
@@ -90,7 +88,7 @@ export function App() {
               <ProtectedRoute>
                 <RoleOnboardingGuard>
                   <RoleExclusiveGuard role="productor">
-                    <ProducerDashboard />
+                    <LegacyAgroBaruApp initialRole="farmer" initialTab="farmer" roleLocked />
                   </RoleExclusiveGuard>
                 </RoleOnboardingGuard>
               </ProtectedRoute>
@@ -102,7 +100,7 @@ export function App() {
               <ProtectedRoute>
                 <RoleOnboardingGuard>
                   <RoleExclusiveGuard role="consumidor">
-                    <ConsumerMarketplace />
+                    <LegacyAgroBaruApp initialRole="buyer" initialTab="marketplace" roleLocked />
                   </RoleExclusiveGuard>
                 </RoleOnboardingGuard>
               </ProtectedRoute>

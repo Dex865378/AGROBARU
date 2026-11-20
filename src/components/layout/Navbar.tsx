@@ -36,6 +36,7 @@ interface NavbarProps {
   unreadCount?: number;
   cartCount?: number;
   onOpenCart?: () => void;
+  roleLocked?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -46,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   unreadCount = 0,
   cartCount = 0,
   onOpenCart,
+  roleLocked = false,
 }) => {
   const { 
     isOffline, 
@@ -179,13 +181,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </button>
 
-              <button
-                onClick={() => openAccountChooser()}
-                className="text-[#FACC15] hover:text-white px-1.5 py-0.5 text-[9px] font-bold border border-[#FACC15]/30 hover:border-[#FACC15] rounded transition-colors"
-                title="Cambiar cuenta de Google"
-              >
-                Cambiar cuenta
-              </button>
+              {!roleLocked && (
+                <button
+                  onClick={() => openAccountChooser()}
+                  className="text-[#FACC15] hover:text-white px-1.5 py-0.5 text-[9px] font-bold border border-[#FACC15]/30 hover:border-[#FACC15] rounded transition-colors"
+                  title="Cambiar cuenta de Google"
+                >
+                  Cambiar cuenta
+                </button>
+              )}
 
               <button
                 onClick={() => logout()}
@@ -206,16 +210,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </Link>
           )}
 
-          {/* Role switcher */}
-          <select
-            value={currentRole}
-            onChange={(e) => setCurrentRole(e.target.value as UserRole)}
-            className="bg-[#111714] border border-[#1E2E26] rounded-lg text-[#E5E5E5] text-[10px] px-2 py-1 font-mono focus:border-[#10B981] focus:outline-none max-w-full"
-          >
-            <option value="farmer">{language === 'en' ? 'Role: Producer (Barú)' : 'Rol: Productor (Barú)'}</option>
-            <option value="buyer">{language === 'en' ? 'Role: Buyer / Exporter' : 'Rol: Comprador / Exportador'}</option>
-            <option value="cooperative">{language === 'en' ? 'Role: MIDA / Cooperative' : 'Rol: MIDA / Cooperativa'}</option>
-          </select>
+          {/* Role switcher: oculto cuando el rol viene del acceso empresarial */}
+          {!roleLocked && (
+            <select
+              value={currentRole}
+              onChange={(e) => setCurrentRole(e.target.value as UserRole)}
+              className="bg-[#111714] border border-[#1E2E26] rounded-lg text-[#E5E5E5] text-[10px] px-2 py-1 font-mono focus:border-[#10B981] focus:outline-none max-w-full"
+            >
+              <option value="farmer">{language === 'en' ? 'Role: Producer (Barú)' : 'Rol: Productor (Barú)'}</option>
+              <option value="buyer">{language === 'en' ? 'Role: Buyer / Exporter' : 'Rol: Comprador / Exportador'}</option>
+              <option value="cooperative">{language === 'en' ? 'Role: MIDA / Cooperative' : 'Rol: MIDA / Cooperativa'}</option>
+            </select>
+          )}
         </div>
       </div>
 

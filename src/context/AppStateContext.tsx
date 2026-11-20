@@ -110,7 +110,10 @@ interface AppStateContextValue {
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
-export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppStateProvider: React.FC<{ children: React.ReactNode; initialRole?: UserRole }> = ({
+  children,
+  initialRole,
+}) => {
   const { success, info, warning } = useNotification();
 
   const [firebaseUser, setFirebaseUser] = useState<User | null>(() => getSavedSessionUser());
@@ -152,7 +155,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     ];
   });
 
-  const [currentRole, setCurrentRoleState] = useState<UserRole>('farmer');
+  const [currentRole, setCurrentRoleState] = useState<UserRole>(initialRole ?? 'farmer');
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('agrobaru_user_profile');
     if (saved) {
@@ -205,6 +208,13 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return [];
     }
   });
+
+  // El rol elegido en el onboarding se aplica al entrar al entorno completo.
+  useEffect(() => {
+    if (initialRole) {
+      setCurrentRoleState(initialRole);
+    }
+  }, [initialRole]);
 
   // 1. FIREBASE AUTH & SESSION RESTORATION LISTENER
   useEffect(() => {
