@@ -12,6 +12,8 @@ import {
   Mail,
   MapPin,
   Pencil,
+  RotateCcw,
+  RotateCw,
   Save,
   ShieldCheck,
   ShoppingBasket,
@@ -23,7 +25,7 @@ import { RoleNavbar } from '@/components/layout/RoleNavbar';
 import { useAuth } from '@/context/AuthContext';
 import { translateAuthError } from '@/lib/authErrors';
 import { copyToClipboard } from '@/lib/utils';
-import { optimizeAvatar, optimizeBanner } from '@/lib/imageOptimizer';
+import { optimizeAvatar, optimizeBanner, rotateBannerImage } from '@/lib/imageOptimizer';
 import { BARU_COMMUNITIES, type BaruCommunity, type UserRole } from '@/types/agrobaru';
 
 function initials(name: string): string {
@@ -125,6 +127,18 @@ export const ProfilePage: React.FC = () => {
     event.target.value = '';
   };
 
+  const handleRotateBanner = async (degrees: number) => {
+    if (!bannerUrl) return;
+    try {
+      setError(null);
+      const rotated = await rotateBannerImage(bannerUrl, degrees);
+      setBannerUrl(rotated);
+      await updateProfileData({ bannerUrl: rotated });
+    } catch {
+      setError('No se pudo rotar el banner. Intenta de nuevo.');
+    }
+  };
+
   const handleConfirmRole = async () => {
     if (!pendingRole) return;
     setRoleBusy(true);
@@ -202,11 +216,31 @@ export const ProfilePage: React.FC = () => {
               <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_30%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-[#111714] via-black/15 to-transparent" />
-            <label className="absolute right-2.5 top-2.5 flex cursor-pointer items-center gap-1 border border-white/25 bg-black/55 px-2 py-1 font-mono text-[9px] font-bold text-white hover:border-[#FACC15] hover:text-[#FACC15]">
-              <ImageIcon className="w-3 h-3" />
-              Cambiar banner
-              <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
-            </label>
+            <div className="absolute right-2.5 top-2.5 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleRotateBanner(-90)}
+                className="flex items-center border border-white/25 bg-black/55 px-1.5 py-1 text-white hover:border-[#FACC15] hover:text-[#FACC15]"
+                title="Rotar banner 90° a la izquierda"
+                aria-label="Rotar banner 90 grados a la izquierda"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRotateBanner(90)}
+                className="flex items-center border border-white/25 bg-black/55 px-1.5 py-1 text-white hover:border-[#FACC15] hover:text-[#FACC15]"
+                title="Rotar banner 90° a la derecha"
+                aria-label="Rotar banner 90 grados a la derecha"
+              >
+                <RotateCw className="w-3 h-3" />
+              </button>
+              <label className="flex cursor-pointer items-center gap-1 border border-white/25 bg-black/55 px-2 py-1 font-mono text-[9px] font-bold text-white hover:border-[#FACC15] hover:text-[#FACC15]">
+                <ImageIcon className="w-3 h-3" />
+                Cambiar banner
+                <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
+              </label>
+            </div>
           </div>
 
           <div className="px-4 sm:px-5 pb-5">

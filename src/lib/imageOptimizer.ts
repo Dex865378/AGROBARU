@@ -41,20 +41,179 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   return readAsDataUrl(blob);
 }
 
-function loadImage(file: Blob): Promise<HTMLImageElement> {
+function loadImageSource(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
     const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('La imagen no se pudo decodificar.'));
-    };
-    image.src = url;
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('La imagen no se pudo decodificar.'));
+    image.src = src;
   });
+}
+
+async function loadImage(file: Blob): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    return await loadImageSource(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+interface ImageFileMeta {
+  /** Orientación EXIF 1-8 (1 = normal). */
+  orientation: number;
+  /** Dimensiones reales del JPEG, antes de que el navegador aplique EXIF. */
+  rawWidth: number;
+  rawHeight: number;
+}
+
+/**
+ * Lee la orientación EXIF y el tamaño real del JPEG. Algunos navegadores
+ * (Safari/iOS y WebViews antiguos) entregan los píxeles sin rotar al canvas,
+ * aunque la vista previa se vea correcta. Con estos datos podemos rotar el
+ * banner nosotros mismos en vez de guardarlo acostado.
+ */
+async function readImageFileMeta(file: File): Promise<ImageFileMeta> {
+  const fallback: ImageFileMeta = { orientation: 1, rawWidth: 0, rawHeight: 0 };
+  if (!/^image\/jpe?g$/i.test(file.type) && !/\.jpe?g$/i.test(file.name)) {
+    return fallback;
+  }
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return fallback;
+
+    let orientation = 1;
+    let rawWidth = 0;
+    let rawHeight = 0;
+    let offset = 2;
+
+    while (offset + 4 < bytes.length) {
+      if (bytes[offset] !== 0xff) {
+        offset += 1;
+        continue;
+      }
+
+      const marker = bytes[offset + 1];
+      if (marker === 0xff) {
+        offset += 1;
+        continue;
+      }
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        offset += 2;
+        continue;
+      }
+      if (marker === 0xd9 || marker === 0xda) break;
+
+      const segmentLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+      if (segmentLength < 2) break;
+      const dataStart = offset + 4;
+
+      // APP1 / Exif: obtener la orientación de la IFD0.
+      if (
+        marker === 0xe1 &&
+        dataStart + 6 < bytes.length &&
+        bytes[dataStart] === 0x45 &&
+        bytes[dataStart + 1] === 0x78 &&
+        bytes[dataStart + 2] === 0x69 &&
+        bytes[dataStart + 3] === 0x66
+      ) {
+        const tiff = dataStart + 6;
+        if (tiff + 8 < bytes.length) {
+          const littleEndian = bytes[tiff] === 0x49 && bytes[tiff + 1] === 0x49;
+          const readU16 = (position: number) =>
+            littleEndian
+              ? bytes[position] | (bytes[position + 1] << 8)
+              : (bytes[position] << 8) | bytes[position + 1];
+          const readU32 = (position: number) =>
+            (littleEndian
+              ? bytes[position] |
+                (bytes[position + 1] << 8) |
+                (bytes[position + 2] << 16) |
+                (bytes[position + 3] << 24)
+              : (bytes[position] << 24) |
+                (bytes[position + 1] << 16) |
+                (bytes[position + 2] << 8) |
+                bytes[position + 3]) >>> 0;
+
+          const ifd = tiff + readU32(tiff + 4);
+          if (ifd + 2 < bytes.length) {
+            const entries = readU16(ifd);
+            for (let index = 0; index < entries; index += 1) {
+              const entry = ifd + 2 + index * 12;
+              if (entry + 12 > bytes.length) break;
+              if (readU16(entry) === 0x0112) {
+                orientation = readU16(entry + 8) || 1;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // SOF0-SOF15: dimensiones reales codificadas en el JPEG.
+      const isStartOfFrame =
+        (marker >= 0xc0 && marker <= 0xc3) ||
+        (marker >= 0xc5 && marker <= 0xc7) ||
+        (marker >= 0xc9 && marker <= 0xcb) ||
+        (marker >= 0xcd && marker <= 0xcf);
+      if (isStartOfFrame && dataStart + 5 < bytes.length) {
+        rawHeight = (bytes[dataStart + 1] << 8) | bytes[dataStart + 2];
+        rawWidth = (bytes[dataStart + 3] << 8) | bytes[dataStart + 4];
+      }
+
+      offset += 2 + segmentLength;
+    }
+
+    return { orientation, rawWidth, rawHeight };
+  } catch {
+    return fallback;
+  }
+}
+
+/** Dibuja la imagen aplicando la transformación EXIF sobre un canvas. */
+function normalizeOrientation(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  orientation: number,
+): HTMLCanvasElement {
+  const swapsDimensions = orientation >= 5 && orientation <= 8;
+  const canvas = document.createElement('canvas');
+  canvas.width = swapsDimensions ? height : width;
+  canvas.height = swapsDimensions ? width : height;
+  const context = canvas.getContext('2d', { alpha: false });
+  if (!context) return canvas;
+
+  context.save();
+  switch (orientation) {
+    case 2:
+      context.transform(-1, 0, 0, 1, width, 0);
+      break;
+    case 3:
+      context.transform(-1, 0, 0, -1, width, height);
+      break;
+    case 4:
+      context.transform(1, 0, 0, -1, 0, height);
+      break;
+    case 5:
+      context.transform(0, 1, 1, 0, 0, 0);
+      break;
+    case 6:
+      context.transform(0, 1, -1, 0, height, 0);
+      break;
+    case 7:
+      context.transform(0, -1, -1, 0, height, width);
+      break;
+    case 8:
+      context.transform(0, -1, 1, 0, 0, width);
+      break;
+    default:
+      break;
+  }
+  context.drawImage(source, 0, 0, width, height);
+  context.restore();
+  return canvas;
 }
 
 /**
@@ -92,6 +251,8 @@ export async function optimizeImage(
     };
   }
 
+  const fileMeta = await readImageFileMeta(file);
+
   // Deja que el navegador pinte la vista previa antes del trabajo pesado.
   await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
@@ -118,6 +279,24 @@ export async function optimizeImage(
     source = image;
     naturalWidth = image.naturalWidth || image.width;
     naturalHeight = image.naturalHeight || image.height;
+  }
+
+  // Si el navegador devolvió los píxeles sin rotar (pero el JPEG trae EXIF),
+  // rotamos aquí para que el banner no se guarde acostado.
+  const sourceMatchesRawJpeg =
+    fileMeta.rawWidth > 0 &&
+    naturalWidth === fileMeta.rawWidth &&
+    naturalHeight === fileMeta.rawHeight;
+  if (sourceMatchesRawJpeg && fileMeta.orientation > 1) {
+    const normalized = normalizeOrientation(
+      source,
+      naturalWidth,
+      naturalHeight,
+      fileMeta.orientation,
+    );
+    source = normalized;
+    naturalWidth = normalized.width;
+    naturalHeight = normalized.height;
   }
 
   let sourceX = 0;
@@ -186,6 +365,75 @@ export async function optimizeImage(
     originalBytes,
     outputBytes: blob.size,
   };
+}
+
+/**
+ * Rota un banner ya guardado y vuelve a recortarlo a 3:1. Sirve para corregir
+ * fotos que traen una orientación EXIF dañada o que fueron tomadas de lado.
+ */
+export async function rotateBannerImage(
+  dataUrl: string,
+  degrees = -90,
+): Promise<string> {
+  const image = await loadImageSource(dataUrl);
+  const radians = (degrees * Math.PI) / 180;
+  const swaps = Math.abs(degrees) % 180 === 90;
+  const rotatedWidth = swaps ? image.naturalHeight : image.naturalWidth;
+  const rotatedHeight = swaps ? image.naturalWidth : image.naturalHeight;
+
+  const rotated = document.createElement('canvas');
+  rotated.width = rotatedWidth;
+  rotated.height = rotatedHeight;
+  const rotatedContext = rotated.getContext('2d', { alpha: false });
+  if (!rotatedContext) throw new Error('El navegador no pudo rotar la imagen.');
+  rotatedContext.fillStyle = '#0A0A0A';
+  rotatedContext.fillRect(0, 0, rotatedWidth, rotatedHeight);
+  rotatedContext.translate(rotatedWidth / 2, rotatedHeight / 2);
+  rotatedContext.rotate(radians);
+  rotatedContext.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+
+  const cropAspect = 3;
+  let sourceWidth = rotatedWidth;
+  let sourceHeight = Math.round(rotatedWidth / cropAspect);
+  if (sourceHeight > rotatedHeight) {
+    sourceHeight = rotatedHeight;
+    sourceWidth = Math.round(rotatedHeight * cropAspect);
+  }
+  const sourceX = Math.round((rotatedWidth - sourceWidth) / 2);
+  const sourceY = Math.round((rotatedHeight - sourceHeight) / 2);
+  const scale = Math.min(1, 1600 / sourceWidth, 640 / sourceHeight);
+  const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+  const output = document.createElement('canvas');
+  output.width = targetWidth;
+  output.height = targetHeight;
+  const outputContext = output.getContext('2d', { alpha: false });
+  if (!outputContext) throw new Error('El navegador no pudo rotar la imagen.');
+  outputContext.imageSmoothingEnabled = true;
+  outputContext.imageSmoothingQuality = 'high';
+  outputContext.fillStyle = '#0A0A0A';
+  outputContext.fillRect(0, 0, targetWidth, targetHeight);
+  outputContext.drawImage(
+    rotated,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    targetWidth,
+    targetHeight,
+  );
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    output.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error('No se pudo rotar el banner.'))),
+      'image/jpeg',
+      0.82,
+    );
+  });
+  return blobToDataUrl(blob);
 }
 
 export const optimizeAvatar = (file: File) =>
