@@ -58,7 +58,8 @@ export const ProductCatalog: React.FC<{
     favorites,
     toggleFavorite,
     currentUser,
-    currentRole
+    currentRole,
+    farms
   } = useAppState();
   const { language, translateDynamic } = useLanguage();
 
@@ -99,14 +100,29 @@ export const ProductCatalog: React.FC<{
   };
 
   const isBatchOwner = (batch: ProductBatch) => {
-    if (currentRole === 'cooperative') return true;
-    if (currentRole === 'buyer') return false;
-    return Boolean(
-      currentUser && (
-        currentUser.id === batch.farmId ||
-        currentUser.name.trim().toLowerCase() === batch.producerName.trim().toLowerCase() ||
-        (currentUser.username && batch.producerUsername && currentUser.username.trim().toLowerCase() === batch.producerUsername.trim().toLowerCase())
-      )
+    if (!currentUser || currentRole === 'buyer') return false;
+    // El UID es la fuente de verdad cuando el lote fue publicado por esta cuenta.
+    if (batch.producerId) return batch.producerId === currentUser.id;
+
+    const normalize = (value?: string) =>
+      (value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^(don|doña|dona|sr|sra)\.?\s+/, '');
+    const namesMatch = (left?: string, right?: string) => {
+      const a = normalize(left);
+      const b = normalize(right);
+      return Boolean(a && b) && (a === b || (a.length > 3 && (a.includes(b) || b.includes(a))));
+    };
+    const farm = farms.find((item) => item.id === batch.farmId);
+    if (farm) {
+      return farm.ownerId === currentUser.id || namesMatch(farm.ownerName, currentUser.name);
+    }
+
+    return (
+      namesMatch(currentUser.name, batch.producerName) ||
+      (Boolean(currentUser.username) &&
+        normalize(currentUser.username) === normalize(batch.producerUsername))
     );
   };
 

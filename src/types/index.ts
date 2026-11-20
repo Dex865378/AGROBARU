@@ -131,6 +131,8 @@ export interface ProductBatch {
   farmId: string;
   farmName: string;
   producerName: string;
+  /** UID de Firebase del productor que publicó el lote. */
+  producerId?: string;
   producerUsername?: string;
   producerReputation?: number;
   producerTier?: ReputationTier;

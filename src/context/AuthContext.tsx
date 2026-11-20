@@ -79,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const unsubscribeProfileRef = useRef<(() => void) | null>(null);
   const profileTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const legacyHydratedRef = useRef<Set<string>>(new Set());
 
   const clearProfileSubscription = useCallback(() => {
     unsubscribeProfileRef.current?.();
@@ -173,6 +174,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribeAuth();
     };
   }, [clearProfileSubscription, ensureUserDocument]);
+
+  // El entorno completo guarda la configuración principal en agrobaru_users
+  // (foto, portada, nombre de finca). /perfil usa users, así que al abrir la
+  // cuenta se completa con esos datos en vez de mostrar el perfil desde cero.
+  useEffect(() => {
+    if (!user || !profile?.uid || legacyHydratedRef.current.has(user.uid)) return;
+    legacyHydratedRef.current.add(user.uid);
+    let cancelled = false;
+
+    const hydrateFromLegacyProfile = async () => {
+      let legacy: DocumentData | null = null;
+      try {
+        const legacySnapshot = await getDoc(doc(db, 'agrobaru_users', user.uid));
+        if (legacySnapshot.exists()) legacy = legacySnapshot.data();
+      } catch (error) {
+        console.warn('[AgroBarú Auth] No se pudo leer el perfil heredado:', error);
+      }
+
+      if (!legacy) {
+        try {
+          const saved = JSON.parse(
+            localStorage.getItem('agrobaru_user_profile') || 'null',
+          ) as Record<string, unknown> | null;
+          if (saved && saved.id === user.uid) legacy = saved;
+        } catch {}
+      }
+      if (!legacy || cancelled) return;
+
+      const patch: Partial<Pick<UserProfile, 'name' | 'photoURL' | 'bannerUrl'>> = {};
+      const legacyName = typeof legacy.name === 'string' ? legacy.name.trim() : '';
+      const legacyPhoto =
+        typeof legacy.photoURL === 'string' && legacy.photoURL ? legacy.photoURL : null;
+      const legacyBanner =
+        typeof legacy.bannerURL === 'string' && legacy.bannerURL ? legacy.bannerURL : null;
+
+      if (legacyName && legacyName !== profile.name) patch.name = legacyName;
+      if (!profile.photoURL && legacyPhoto) patch.photoURL = legacyPhoto;
+      if (!profile.bannerUrl && legacyBanner) patch.bannerUrl = legacyBanner;
+
+      if (Object.keys(patch).length === 0) return;
+      setProfile((current) =>
+        current && current.uid === user.uid ? { ...current, ...patch } : current,
+      );
+      try {
+        await setDoc(doc(db, USERS_COLLECTION, user.uid), patch, { merge: true });
+      } catch (error) {
+        console.warn('[AgroBarú Auth] No se pudo completar users/{uid}:', error);
+      }
+    };
+
+    void hydrateFromLegacyProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, profile?.uid, profile?.name, profile?.photoURL, profile?.bannerUrl]);
 
   useEffect(() => {
     const handleOnline = () => setOnline(true);
@@ -293,6 +349,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           { ...patch, updatedAt: now },
           { merge: true },
         );
+        // Mantener sincronizado el perfil del entorno completo (foto, portada
+        // y nombre) para que no se pierda al abrir Mi Cuenta.
+        const legacyRef = doc(db, 'agrobaru_users', user.uid);
+        const legacySnapshot = await getDoc(legacyRef);
+        if (legacySnapshot.exists()) {
+          const legacyPatch: Record<string, unknown> = {};
+          if (patch.name) legacyPatch.name = patch.name;
+          if ('photoURL' in patch) legacyPatch.photoURL = patch.photoURL;
+          if ('bannerUrl' in patch) legacyPatch.bannerURL = patch.bannerUrl;
+          if (Object.keys(legacyPatch).length > 0) {
+            await setDoc(legacyRef, legacyPatch, { merge: true });
+          }
+        }
       } catch (error) {
         setProfile(previousProfile);
         throw error;

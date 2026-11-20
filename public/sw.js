@@ -1,5 +1,5 @@
 // AgroBarú Service Worker - Offline First Caching Strategy
-const CACHE_NAME = 'agrobaru-v1.6.4';
+const CACHE_NAME = 'agrobaru-v1.7.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

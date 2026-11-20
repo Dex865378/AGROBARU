@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'e.milsa.c.cruba18@gmail.com';
+    }
+
     // 1. Perfiles de Usuarios / Productores
     // Lectura pública para el directorio y marketplace. Escritura restringida al dueño de la cuenta.
     match /agrobaru_users/{userId} {
@@ -53,7 +58,8 @@ service cloud.firestore {
     // Cada usuario solo puede leer y modificar su propio perfil. El rol se
     // actualiza desde /perfil o /seleccionar-rol por el propio dueño.
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null
         && request.auth.uid == userId
         && request.resource.data.uid == userId
@@ -92,7 +98,19 @@ service cloud.firestore {
         && request.resource.data.traceabilityHash is string
         && request.resource.data.traceabilityHash.matches('^[0-9a-f]{64}$');
       allow delete: if request.auth != null
-        && resource.data.producerId == request.auth.uid;
+        && (resource.data.producerId == request.auth.uid || isAdmin());
+    }
+
+    // 9. Comunidad agrícola (mensajes compartidos en tiempo real)
+    // Cualquier usuario autenticado puede leer y reaccionar; solo el autor
+    // puede borrar su mensaje y el administrador puede moderar.
+    match /communityMessages/{groupId}/messages/{messageId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null
+        && (resource.data.senderId == request.auth.uid || isAdmin());
     }
 
     // Regla de rechazo por defecto para colecciones no autorizadas

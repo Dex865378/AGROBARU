@@ -72,6 +72,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
   const {
     currentUser,
     currentRole,
+    farms,
     isOffline,
     updateBatchStockAndStatus,
     updateBatchImages,
@@ -137,15 +138,28 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
   // STRICT OWNERSHIP CHECK: Only the producer who owns this batch (or cooperative admin) can edit photos, stock, or delete
   const isOwner = (() => {
-    if (currentRole === 'cooperative') return true;
-    if (currentRole === 'buyer') return false;
-    return Boolean(
-      currentUser && (
-        currentUser.id === batch.farmId ||
-        currentUser.name.trim().toLowerCase() === batch.producerName.trim().toLowerCase() ||
-        (currentUser.username && batch.producerUsername && currentUser.username.trim().toLowerCase() === batch.producerUsername.trim().toLowerCase()) ||
-        currentUser.role === 'farmer'
-      )
+    if (!currentUser || currentRole === 'buyer') return false;
+    if (batch.producerId) return batch.producerId === currentUser.id;
+
+    const normalize = (value?: string) =>
+      (value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^(don|doña|dona|sr|sra)\.?\s+/, '');
+    const namesMatch = (left?: string, right?: string) => {
+      const a = normalize(left);
+      const b = normalize(right);
+      return Boolean(a && b) && (a === b || (a.length > 3 && (a.includes(b) || b.includes(a))));
+    };
+    const farm = farms.find((item) => item.id === batch.farmId);
+    if (farm) {
+      return farm.ownerId === currentUser.id || namesMatch(farm.ownerName, currentUser.name);
+    }
+
+    return (
+      namesMatch(currentUser.name, batch.producerName) ||
+      (Boolean(currentUser.username) &&
+        normalize(currentUser.username) === normalize(batch.producerUsername))
     );
   })();
 

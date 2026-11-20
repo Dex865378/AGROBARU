@@ -509,6 +509,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode; initialRole
       farmName: farm.name,
       corregimiento: farm.corregimiento,
       producerName: farm.ownerName,
+      producerId: currentUser.id,
       cropName: batchData.cropName || 'Banano Cavendish',
       variety: batchData.variety || 'Gran Enano',
       batchCode,

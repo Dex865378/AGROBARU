@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAppState } from '@/context/AppStateContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { isAdminEmail } from '@/lib/admin';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/types';
@@ -180,6 +181,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {currentUser.reputationScore || 99.4}%
                 </span>
               </button>
+
+              {roleLocked && isAdminEmail(currentUser.email) && (
+                <Link
+                  to="/admin"
+                  className="text-[#FACC15] hover:text-white px-1.5 py-0.5 text-[9px] font-bold border border-[#FACC15]/30 hover:border-[#FACC15] rounded transition-colors"
+                  title="Panel de administración"
+                >
+                  Admin
+                </Link>
+              )}
 
               {roleLocked ? (
                 <Link

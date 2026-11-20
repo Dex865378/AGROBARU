@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  ShieldAlert,
   ShieldCheck,
   ShoppingBasket,
   Sprout,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { translateAuthError } from '@/lib/authErrors';
+import { isAdminEmail } from '@/lib/admin';
 
 function initials(name: string): string {
   const parts = name
@@ -25,11 +27,12 @@ function initials(name: string): string {
 }
 
 export const RoleNavbar: React.FC = () => {
-  const { profile, online, logout } = useAuth();
+  const { user, profile, online, logout } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
   const role = profile?.role;
+  const admin = isAdminEmail(user?.email || profile?.email);
   const home = role === 'productor' ? '/productor' : '/mercado';
 
   const handleLogout = async () => {
@@ -91,6 +94,23 @@ export const RoleNavbar: React.FC = () => {
             >
               <ShoppingBasket className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Mercado</span>
+            </NavLink>
+          )}
+
+          {admin && (
+            <NavLink
+              to="/admin"
+              aria-label="Panel de administración"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-colors ${
+                  isActive
+                    ? 'bg-[#FACC15] text-black'
+                    : 'text-[#FACC15] hover:bg-[#FACC15]/10'
+                }`
+              }
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Admin</span>
             </NavLink>
           )}
 

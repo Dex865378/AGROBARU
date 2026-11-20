@@ -13,6 +13,7 @@ import {
 import { AuthPage } from '@/pages/auth/AuthPage';
 import { RoleSelectionPage } from '@/pages/onboarding/RoleSelectionPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
+import { AdminPage } from '@/pages/admin/AdminPage';
 import { registerServiceWorker } from '@/lib/registerServiceWorker';
 
 function RootGate() {
@@ -115,6 +116,16 @@ export function App() {
                 <RoleOnboardingGuard>
                   <ProfilePage />
                 </RoleOnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Administración: la página valida el correo administrador. */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             }
           />

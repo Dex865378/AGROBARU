@@ -24,7 +24,8 @@ import {
   Smile,
   Sticker,
   Heart,
-  Laugh
+  Laugh,
+  MoreHorizontal
 } from 'lucide-react';
 import { PestAlertEngine } from '@/components/alerts/PestAlertEngine';
 import { useAppState } from '@/context/AppStateContext';
@@ -38,26 +39,11 @@ import { SafeImage } from '@/components/ui/SafeImage';
 import { BUNDLED_CROP_IMAGES, createInitialsAvatarDataUri } from '@/lib/imageFallbacks';
 import { PublicProfileModal, PublicProfileTarget } from '@/components/profile/PublicProfileModal';
 import { optimizeChatImage } from '@/lib/imageOptimizer';
-
-interface CommunityMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderUsername: string;
-  senderAvatar: string;
-  roleBadge: string;
-  text: string;
-  imageUrl?: string;
-  timestamp: string;
-  replyTo?: {
-    senderName: string;
-    textSnippet: string;
-  };
-  likes: number;
-  hasLiked?: boolean;
-  sticker?: string;
-  reactions?: Record<string, string[]>;
-}
+import {
+  saveCommunityMessage,
+  subscribeGroupMessages,
+  type CommunityMessage,
+} from '@/services/communityService';
 
 interface CommunityGroup {
   id: string;
@@ -182,6 +168,7 @@ export const CommunityAndAlerts: React.FC = () => {
   const [selectedChatContact, setSelectedChatContact] = useState<ChatContact | null>(null);
   const [activePublicProfile, setActivePublicProfile] = useState<PublicProfileTarget | null>(null);
   const [isStickerPanelOpen, setIsStickerPanelOpen] = useState(false);
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [messagesHydrated, setMessagesHydrated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -208,6 +195,37 @@ export const CommunityAndAlerts: React.FC = () => {
     } catch {}
   }, [groupMessages, messagesHydrated]);
 
+  // Firestore es la fuente compartida: los mensajes nuevos aparecen en otros
+  // dispositivos y siguen ahí después de recargar. Los seeds locales quedan
+  // como contenido de bienvenida cuando todavía no hay mensajes remotos.
+  useEffect(() => {
+    if (!messagesHydrated) return;
+    let active = true;
+    const unsubscribe = subscribeGroupMessages(activeGroupId, (remoteMessages) => {
+      if (!active) return;
+      setGroupMessages((previous) => {
+        const localMessages = previous[activeGroupId] || [];
+        const merged = new Map(localMessages.map((message) => [message.id, message]));
+        remoteMessages.forEach((message) => {
+          merged.set(message.id, {
+            ...message,
+            hasLiked: (message.likedBy || []).includes(currentUser.id),
+          });
+        });
+        const ordered = Array.from(merged.values()).sort((a, b) => {
+          const left = a.createdAt ? Date.parse(a.createdAt) || 0 : 0;
+          const right = b.createdAt ? Date.parse(b.createdAt) || 0 : 0;
+          return left - right;
+        });
+        return { ...previous, [activeGroupId]: ordered };
+      });
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [activeGroupId, messagesHydrated, currentUser.id]);
+
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (container) container.scrollTop = container.scrollHeight;
@@ -228,6 +246,8 @@ export const CommunityAndAlerts: React.FC = () => {
       imageUrl: attachedImage || undefined,
       sticker: undefined,
       reactions: {},
+      likedBy: [],
+      createdAt: new Date().toISOString(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       replyTo: replyingTo ? {
         senderName: replyingTo.senderName,
@@ -244,39 +264,55 @@ export const CommunityAndAlerts: React.FC = () => {
     setInputText('');
     setReplyingTo(null);
     setAttachedImage(null);
-    success('Mensaje Publicado', 'Tu aporte se ha compartido con la comunidad del grupo.');
+    void saveCommunityMessage(activeGroupId, newMsg).catch(() =>
+      info('Guardado local', 'El mensaje se sincronizará cuando vuelva la conexión.'),
+    );
+    success('Mensaje Publicado', 'Tu aporte se compartió y quedó guardado para la comunidad.');
   };
 
   const handleToggleLike = (msgId: string) => {
-    setGroupMessages(prev => ({
+    const message = (groupMessages[activeGroupId] || []).find((item) => item.id === msgId);
+    if (!message) return;
+    const likedBy = message.likedBy || (message.hasLiked ? [currentUser.id] : []);
+    const alreadyLiked = likedBy.includes(currentUser.id);
+    const nextLikedBy = alreadyLiked
+      ? likedBy.filter((id) => id !== currentUser.id)
+      : [...likedBy, currentUser.id];
+    const nextMessage: CommunityMessage = {
+      ...message,
+      likes: Math.max(0, message.likes + (alreadyLiked ? -1 : 1)),
+      likedBy: nextLikedBy,
+      hasLiked: !alreadyLiked,
+    };
+    setGroupMessages((prev) => ({
       ...prev,
-      [activeGroupId]: (prev[activeGroupId] || []).map(m => {
-        if (m.id !== msgId) return m;
-        return {
-          ...m,
-          likes: m.hasLiked ? m.likes - 1 : m.likes + 1,
-          hasLiked: !m.hasLiked
-        };
-      })
+      [activeGroupId]: (prev[activeGroupId] || []).map((item) =>
+        item.id === msgId ? nextMessage : item,
+      ),
     }));
+    void saveCommunityMessage(activeGroupId, nextMessage).catch(() => {});
   };
 
   const handleToggleReaction = (msgId: string, emoji: string) => {
+    const message = (groupMessages[activeGroupId] || []).find((item) => item.id === msgId);
+    if (!message) return;
+    const reactions = { ...(message.reactions || {}) };
+    const users = reactions[emoji] || [];
+    const alreadyReacted = users.includes(currentUser.id);
+    const nextUsers = alreadyReacted
+      ? users.filter((id) => id !== currentUser.id)
+      : [...users, currentUser.id];
+    if (nextUsers.length === 0) delete reactions[emoji];
+    else reactions[emoji] = nextUsers;
+    const nextMessage: CommunityMessage = { ...message, reactions };
     setGroupMessages((prev) => ({
       ...prev,
-      [activeGroupId]: (prev[activeGroupId] || []).map((message) => {
-        if (message.id !== msgId) return message;
-        const reactions = { ...(message.reactions || {}) };
-        const users = reactions[emoji] || [];
-        const alreadyReacted = users.includes(currentUser.id);
-        const nextUsers = alreadyReacted
-          ? users.filter((id) => id !== currentUser.id)
-          : [...users, currentUser.id];
-        if (nextUsers.length === 0) delete reactions[emoji];
-        else reactions[emoji] = nextUsers;
-        return { ...message, reactions };
-      }),
+      [activeGroupId]: (prev[activeGroupId] || []).map((item) =>
+        item.id === msgId ? nextMessage : item,
+      ),
     }));
+    void saveCommunityMessage(activeGroupId, nextMessage).catch(() => {});
+    setReactionPickerFor(null);
   };
 
   const handleSendSticker = (sticker: string) => {
@@ -290,6 +326,8 @@ export const CommunityAndAlerts: React.FC = () => {
       text: '',
       sticker,
       reactions: {},
+      likedBy: [],
+      createdAt: new Date().toISOString(),
       likes: 0,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
@@ -298,6 +336,7 @@ export const CommunityAndAlerts: React.FC = () => {
       [activeGroupId]: [...(prev[activeGroupId] || []), newMsg],
     }));
     setIsStickerPanelOpen(false);
+    void saveCommunityMessage(activeGroupId, newMsg).catch(() => {});
   };
 
   const handleOpenAuthorProfile = (msg: CommunityMessage) => {
@@ -479,6 +518,7 @@ export const CommunityAndAlerts: React.FC = () => {
                 onClick={() => {
                   setActiveGroupId(g.id);
                   setReplyingTo(null);
+                  setReactionPickerFor(null);
                 }}
                 className={`px-3 py-1 text-[10px] font-bold uppercase transition-all shrink-0 flex items-center gap-1.5 ${
                   activeGroupId === g.id
@@ -687,18 +727,39 @@ export const CommunityAndAlerts: React.FC = () => {
                       <span>{msg.likes > 0 && msg.likes}</span>
                     </button>
 
-                    <div className="flex items-center gap-1 bg-[#0A0A0A] border border-[#1E293B] px-1 py-0.5">
-                      {['👍', '❤️', '😂', '🙏'].map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => handleToggleReaction(msg.id, emoji)}
-                          className="text-[13px] leading-none hover:scale-125 transition-transform px-0.5"
-                          title={`Reaccionar con ${emoji}`}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setReactionPickerFor((current) =>
+                            current === msg.id ? null : msg.id,
+                          )
+                        }
+                        className={`flex items-center gap-0.5 border px-1.5 py-0.5 font-bold ${
+                          reactionPickerFor === msg.id
+                            ? 'border-[#FACC15] text-[#FACC15] bg-[#FACC15]/10'
+                            : 'border-[#1E293B] text-[#9E9E9E] hover:text-[#E5E5E5]'
+                        }`}
+                        title="Reaccionar a este comentario"
+                        aria-label="Abrir reacciones"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+                      {reactionPickerFor === msg.id && (
+                        <div className="absolute bottom-full left-0 z-30 mb-1 flex items-center gap-1 border border-[#15803D]/50 bg-[#111714] p-1 shadow-lg">
+                          {['👍', '❤️', '😂', '🙏', '🔥', '🌱'].map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => handleToggleReaction(msg.id, emoji)}
+                              className="px-1 text-base leading-none transition-transform hover:scale-125"
+                              title={`Reaccionar con ${emoji}`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <button

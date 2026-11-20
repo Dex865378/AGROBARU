@@ -41,6 +41,7 @@ import { GoogleBusinessProfileModal } from '@/components/legal/GoogleBusinessPro
 import { HelpFaqModal } from '@/components/legal/HelpFaqModal';
 import { QuickHelpWidget } from '@/components/legal/QuickHelpWidget';
 import { CartDrawerModal } from '@/components/marketplace/CartDrawerModal';
+import { NewUserAssistant } from '@/components/onboarding/NewUserAssistant';
 
 const CalculatorView: React.FC = () => {
   const { language } = useLanguage();
@@ -101,7 +102,7 @@ const MainLayout: React.FC<{ roleLocked?: boolean; initialTab?: string }> = ({
   roleLocked,
   initialTab = 'home',
 }) => {
-  const { cart } = useAppState();
+  const { cart, currentUser, currentRole } = useAppState();
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [marketplaceSubTab, setMarketplaceSubTab] = useState<'catalog' | 'orders'>('catalog');
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
@@ -408,6 +409,13 @@ const MainLayout: React.FC<{ roleLocked?: boolean; initialTab?: string }> = ({
           </Dock>
         </div>
       </div>
+
+      <NewUserAssistant
+        enabled={Boolean(roleLocked)}
+        userId={currentUser.id}
+        role={currentRole}
+        onNavigate={navigateToTab}
+      />
 
       <Footer 
         onOpenLegalModal={handleOpenLegal}
