@@ -22,6 +22,7 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
   children,
 }) => {
   const [isPortrait, setIsPortrait] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<string | undefined>(undefined);
 
   if (!src) {
     return (
@@ -33,7 +34,12 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
   }
 
   return (
-    <div className={`relative overflow-hidden bg-[#0A0A0A] ${className}`}>
+    <div
+      className={`relative overflow-hidden bg-[#0A0A0A] ${
+        isPortrait ? 'h-44 sm:h-60' : 'max-h-[600px]'
+      } ${className}`}
+      style={!isPortrait && aspectRatio ? { aspectRatio } : undefined}
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-40 blur-2xl"
@@ -44,11 +50,13 @@ export const ProfileBanner: React.FC<ProfileBannerProps> = ({
         alt={alt}
         onLoad={(event) => {
           const image = event.currentTarget;
-          setIsPortrait(image.naturalHeight > image.naturalWidth);
+          const portrait = image.naturalHeight > image.naturalWidth;
+          setIsPortrait(portrait);
+          setAspectRatio(
+            portrait ? undefined : `${image.naturalWidth} / ${image.naturalHeight}`,
+          );
         }}
-        className={`relative z-10 mx-auto block h-auto w-full object-contain ${
-          isPortrait ? 'max-h-[420px]' : 'max-h-[600px]'
-        }`}
+        className="absolute inset-0 z-10 h-full w-full object-contain"
       />
       {children}
     </div>
