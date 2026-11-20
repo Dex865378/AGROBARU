@@ -91,7 +91,7 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
   }, [contact, isOpen, initialMessage]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages]);
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -131,7 +131,7 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
         localStorage.setItem(storedKey, JSON.stringify(withReply));
         return withReply;
       });
-    }, 1200);
+    }, 450);
   };
 
   if (!contact) return null;

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
+  Camera,
   Check,
   CheckCircle2,
   Copy,
+  Image as ImageIcon,
   LogOut,
   Mail,
   MapPin,
@@ -21,6 +23,7 @@ import { RoleNavbar } from '@/components/layout/RoleNavbar';
 import { useAuth } from '@/context/AuthContext';
 import { translateAuthError } from '@/lib/authErrors';
 import { copyToClipboard } from '@/lib/utils';
+import { optimizeAvatar, optimizeBanner } from '@/lib/imageOptimizer';
 import { BARU_COMMUNITIES, type BaruCommunity, type UserRole } from '@/types/agrobaru';
 
 function initials(name: string): string {
@@ -35,6 +38,8 @@ export const ProfilePage: React.FC = () => {
 
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState(profile?.name || '');
+  const [photoUrl, setPhotoUrl] = useState(profile?.photoURL || '');
+  const [bannerUrl, setBannerUrl] = useState(profile?.bannerUrl || '');
   const [community, setCommunity] = useState<BaruCommunity>(profile?.community || 'Otro');
   const [savingProfile, setSavingProfile] = useState(false);
   const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
@@ -48,7 +53,9 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     setName(profile?.name || '');
     setCommunity(profile?.community || 'Otro');
-  }, [profile?.name, profile?.community]);
+    setPhotoUrl(profile?.photoURL || '');
+    setBannerUrl(profile?.bannerUrl || '');
+  }, [profile?.name, profile?.community, profile?.photoURL, profile?.bannerUrl]);
 
   useEffect(() => {
     if (!toast) return;
@@ -73,7 +80,12 @@ export const ProfilePage: React.FC = () => {
     }
     setSavingProfile(true);
     try {
-      await updateProfileData({ name: name.trim(), community });
+      await updateProfileData({
+        name: name.trim(),
+        community,
+        photoURL: photoUrl || null,
+        bannerUrl: bannerUrl || null,
+      });
       setEditMode(false);
       setToast('Datos de la cuenta actualizados.');
     } catch (saveError) {
@@ -81,6 +93,30 @@ export const ProfilePage: React.FC = () => {
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setPhotoUrl(preview);
+    optimizeAvatar(file)
+      .then((optimized) => setPhotoUrl((current) => (current === preview ? optimized.dataUrl : current)))
+      .catch(() => setError('No se pudo procesar la foto de perfil.'))
+      .finally(() => URL.revokeObjectURL(preview));
+    event.target.value = '';
+  };
+
+  const handleBannerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setBannerUrl(preview);
+    optimizeBanner(file)
+      .then((optimized) => setBannerUrl((current) => (current === preview ? optimized.dataUrl : current)))
+      .catch(() => setError('No se pudo procesar el banner. Usa una imagen más liviana.'))
+      .finally(() => URL.revokeObjectURL(preview));
+    event.target.value = '';
   };
 
   const handleConfirmRole = async () => {
@@ -139,25 +175,60 @@ export const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {/* Tarjeta de identidad */}
-        <section className="rounded-2xl border border-[#1E2E26] bg-[#111714] p-5">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-            <div className="shrink-0">
-              {profile?.photoURL ? (
-                <img
-                  src={profile.photoURL}
-                  alt={profile.name}
-                  className="w-20 h-20 rounded-2xl object-cover border-2 border-[#15803D]"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#15803D] flex items-center justify-center">
-                  <span className="font-display font-black text-2xl text-[#05100A]">
-                    {initials(profile?.name || 'Agro Barú')}
-                  </span>
-                </div>
-              )}
-            </div>
+        {/* Tarjeta de identidad compacta con banner largo */}
+        <section className="overflow-hidden rounded-2xl border border-[#1E2E26] bg-[#111714]">
+          <div className="relative h-28 sm:h-36 bg-[#0A0A0A]">
+            {bannerUrl ? (
+              <img
+                src={bannerUrl}
+                alt={`Portada de ${profile?.name || 'AgroBarú'}`}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-full h-full bg-[radial-gradient(circle_at_20%_20%,#15803D_0%,transparent_45%),radial-gradient(circle_at_80%_30%,#7C3AED_0%,transparent_40%),linear-gradient(135deg,#0A0A0A,#111714)]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111714] via-black/15 to-transparent" />
+            <label className="absolute right-2.5 top-2.5 flex cursor-pointer items-center gap-1 border border-white/25 bg-black/55 px-2 py-1 font-mono text-[9px] font-bold text-white hover:border-[#FACC15] hover:text-[#FACC15]">
+              <ImageIcon className="w-3 h-3" />
+              Cambiar banner
+              <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
+            </label>
+          </div>
+
+          <div className="px-4 sm:px-5 pb-5">
+            <div className="-mt-10 sm:-mt-12 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+              <button
+                type="button"
+                onClick={() => document.getElementById('profile-avatar-input')?.click()}
+                className="relative shrink-0 group self-start"
+                title="Cambiar foto de perfil"
+              >
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt={profile?.name || 'Foto de perfil'}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-[#111714] ring-2 ring-[#15803D]"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#15803D] border-4 border-[#111714] ring-2 ring-[#15803D] flex items-center justify-center">
+                    <span className="font-display font-black text-2xl text-[#05100A]">
+                      {initials(profile?.name || 'Agro Barú')}
+                    </span>
+                  </div>
+                )}
+                <span className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+                  <Camera className="w-4 h-4" />
+                </span>
+              </button>
+              <input
+                id="profile-avatar-input"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
 
             <div className="flex-1 min-w-0">
               {!editMode ? (
@@ -289,6 +360,7 @@ export const ProfilePage: React.FC = () => {
               <Copy className="w-3 h-3" />
               {copiedUid ? 'Copiado' : 'Copiar UID'}
             </button>
+          </div>
           </div>
         </section>
 

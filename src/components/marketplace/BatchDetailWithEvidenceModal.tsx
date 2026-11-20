@@ -27,7 +27,9 @@ import {
   MessageSquare,
   Trash2,
   Clock,
-  Timer
+  Timer,
+  ChevronLeft,
+  Maximize2
 } from 'lucide-react';
 import { ProductBatch } from '@/types';
 import { useAppState } from '@/context/AppStateContext';
@@ -37,12 +39,12 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { processAvatarUpload } from '@/services/reputationService';
 import { DirectMessageModal } from '@/components/chat/DirectMessageModal';
 import { DeleteBatchModal } from './DeleteBatchModal';
 import { formatTimeAgo, getFreshnessTier, getRemainingPurgeHours } from '@/services/dateUtils';
 import { SafeImage } from '@/components/ui/SafeImage';
-import { BUNDLED_CROP_IMAGES, resolveProductImage } from '@/lib/imageFallbacks';
+import { BUNDLED_CROP_IMAGES, getCropImageByName, resolveProductImage } from '@/lib/imageFallbacks';
+import { optimizeProductPhoto } from '@/lib/imageOptimizer';
 
 interface BatchDetailWithEvidenceModalProps {
   batch: ProductBatch | null;
@@ -50,6 +52,13 @@ interface BatchDetailWithEvidenceModalProps {
   onClose: () => void;
   onOpenEscrowCheckout?: (batch: ProductBatch) => void;
   onRequestSample?: (batch: ProductBatch) => void;
+  onOpenProducerProfile?: (target: {
+    id?: string;
+    name: string;
+    role?: string;
+    location?: string;
+    reputation?: number;
+  }) => void;
 }
 
 export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModalProps> = ({
@@ -57,9 +66,17 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
   isOpen,
   onClose,
   onOpenEscrowCheckout,
-  onRequestSample
+  onRequestSample,
+  onOpenProducerProfile
 }) => {
-  const { currentUser, currentRole, isOffline, updateBatchStockAndStatus, deleteProductBatch } = useAppState();
+  const {
+    currentUser,
+    currentRole,
+    isOffline,
+    updateBatchStockAndStatus,
+    updateBatchImages,
+    deleteProductBatch
+  } = useAppState();
   const { language, translateDynamic } = useLanguage();
   const { success, warning, error } = useNotification();
 
@@ -68,6 +85,8 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
   const [isDetailTechnicalView, setIsDetailTechnicalView] = useState<boolean>(false);
   const [isDirectChatOpen, setIsDirectChatOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [galleryIndex, setGalleryIndex] = useState<number>(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Stock edit states
   const [editAvailableKg, setEditAvailableKg] = useState<number>(batch ? batch.availableKg : 1000);
@@ -81,6 +100,11 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
     if (batch) {
       setEditAvailableKg(batch.availableKg);
       setEditStatus(batch.status);
+      const images = batch.images?.length
+        ? batch.images
+        : [getCropImageByName(batch.cropName)];
+      setCustomPhotos(Array.from(new Set(images.filter(Boolean))));
+      setGalleryIndex(0);
     }
   }, [batch]);
 
@@ -94,11 +118,20 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
   const [customPhotos, setCustomPhotos] = useState<string[]>([
     BUNDLED_CROP_IMAGES.banana,
-    BUNDLED_CROP_IMAGES.platano,
   ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const customFileInputRef = useRef<HTMLInputElement>(null);
+
+  const galleryImages = React.useMemo(() => {
+    if (!batch) return [];
+    const source = batch.images?.length
+      ? [...batch.images, ...customPhotos]
+      : [getCropImageByName(batch.cropName), ...customPhotos];
+    return Array.from(new Set(source.filter(Boolean)));
+  }, [batch, customPhotos]);
+
+  const activeGalleryImage = galleryImages[galleryIndex] || galleryImages[0];
 
   if (!batch) return null;
 
@@ -161,8 +194,13 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
     if (!file) return;
 
     try {
-      const base64 = await processAvatarUpload(file);
+      const optimized = await optimizeProductPhoto(file);
+      const base64 = optimized.dataUrl;
       setStagePhotos(prev => ({ ...prev, [selectedStage]: base64 }));
+      const nextImages = Array.from(new Set([...(batch.images || []), ...customPhotos, base64]));
+      setCustomPhotos(nextImages);
+      setGalleryIndex(nextImages.length - 1);
+      await updateBatchImages(batch.id, nextImages);
       success('Foto de Proceso Cargada', `Evidencia guardada para la ${stages[selectedStage].title}.`);
     } catch (err: any) {
       warning('Formato no soportado', 'Intenta con una imagen JPG o PNG.');
@@ -179,8 +217,12 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
     if (!file) return;
 
     try {
-      const base64 = await processAvatarUpload(file);
-      setCustomPhotos(prev => [base64, ...prev]);
+      const optimized = await optimizeProductPhoto(file);
+      const base64 = optimized.dataUrl;
+      const nextImages = Array.from(new Set([base64, ...(batch.images || []), ...customPhotos]));
+      setCustomPhotos(nextImages);
+      setGalleryIndex(0);
+      await updateBatchImages(batch.id, nextImages);
       success('Foto Agregada', 'Evidencia fotográfica añadida a la galería libre del lote.');
     } catch (err: any) {
       warning('Formato no soportado', 'Intenta con una imagen JPG o PNG.');
@@ -380,6 +422,78 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
             </div>
           </div>
 
+          {/* Galería real del producto: imagen principal + miniaturas */}
+          <div className="bg-[#141414] border border-[#1E293B] p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_72px] gap-2">
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(galleryIndex)}
+                className="relative aspect-video sm:aspect-[16/10] max-h-64 w-full overflow-hidden bg-[#0A0A0A] border border-[#1E293B] group"
+                title="Ampliar imagen"
+              >
+                {activeGalleryImage ? (
+                  <SafeImage
+                    src={activeGalleryImage}
+                    alt={`${batch.cropName} — foto ${galleryIndex + 1}`}
+                    fallbackType="product"
+                    cropHint={batch.cropName}
+                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-[#666666] text-[10px]">
+                    <Camera className="w-7 h-7 mb-1 text-[#15803D]" />
+                    Sin fotos cargadas
+                  </div>
+                )}
+                <span className="absolute bottom-1.5 right-1.5 bg-black/70 border border-white/20 text-white text-[9px] px-1.5 py-0.5 flex items-center gap-1">
+                  <Maximize2 className="w-3 h-3" />
+                  Ampliar
+                </span>
+                {galleryImages.length > 1 && (
+                  <span className="absolute top-1.5 left-1.5 bg-black/70 border border-white/20 text-white text-[9px] px-1.5 py-0.5">
+                    {galleryIndex + 1} / {galleryImages.length}
+                  </span>
+                )}
+              </button>
+
+              {galleryImages.length > 1 && (
+                <div className="flex sm:flex-col gap-1.5 overflow-x-auto sm:overflow-y-auto sm:max-h-64 pr-0.5">
+                  {galleryImages.map((image, index) => (
+                    <button
+                      key={`${image}-${index}`}
+                      type="button"
+                      onClick={() => setGalleryIndex(index)}
+                      className={`w-14 h-14 shrink-0 overflow-hidden border-2 bg-[#0A0A0A] ${
+                        galleryIndex === index ? 'border-[#FACC15]' : 'border-[#1E293B] opacity-75 hover:opacity-100'
+                      }`}
+                      title={`Ver foto ${index + 1}`}
+                    >
+                      <SafeImage
+                        src={image}
+                        alt={`Miniatura ${index + 1}`}
+                        fallbackType="product"
+                        cropHint={batch.cropName}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between mt-1.5 px-0.5 font-mono text-[9px] text-[#9E9E9E]">
+              <span>{galleryImages.length} foto{galleryImages.length === 1 ? '' : 's'} del lote</span>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => customFileInputRef.current?.click()}
+                  className="text-[#FACC15] hover:text-white flex items-center gap-1"
+                >
+                  <PlusCircle className="w-3 h-3" /> Añadir foto
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* VISTA ESENCIAL - HIGHLIGHTS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-[#141414] p-3 border border-[#1E293B] min-w-0">
@@ -419,7 +533,26 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
           <div className="bg-[#0A0A0A] p-3 border border-[#15803D] flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="text-[10px] text-[#9E9E9E] uppercase">Productor Certificado:</div>
-              <div className="text-sm font-bold text-[#E5E5E5]">{batch.producerName}</div>
+              {onOpenProducerProfile ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenProducerProfile({
+                      id: batch.farmId,
+                      name: batch.producerName,
+                      role: 'productor',
+                      location: batch.corregimiento,
+                      reputation: batch.producerReputation,
+                    });
+                  }}
+                  className="text-sm font-bold text-[#E5E5E5] hover:text-[#10B981] underline decoration-[#15803D]/40 underline-offset-2 text-left"
+                >
+                  {batch.producerName}
+                </button>
+              ) : (
+                <div className="text-sm font-bold text-[#E5E5E5]">{batch.producerName}</div>
+              )}
               <div className="text-[10px] text-[#15803D]">Reputación: {batch.producerReputation || 99.4}% de entregas a tiempo</div>
             </div>
             
@@ -598,7 +731,15 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {customPhotos.map((photo, i) => (
-              <div key={i} className="relative aspect-square border border-[#1E293B] overflow-hidden bg-[#141414] group">
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  const index = galleryImages.findIndex((image) => image === photo);
+                  setLightboxIndex(index >= 0 ? index : i);
+                }}
+                className="relative aspect-square border border-[#1E293B] overflow-hidden bg-[#141414] group text-left"
+              >
                 <SafeImage
                   src={i === 0 && batch.images?.[0] ? resolveProductImage(batch.images[0], batch.cropName) : photo}
                   alt={`Foto libre ${i + 1}`}
@@ -610,7 +751,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
                   <span>Evidencia #{i + 1}</span>
                   <Check className="w-3 h-3 text-[#15803D]" />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -809,6 +950,58 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
           )}
         </div>
       </div>
+
+      {/* Visor de fotos a pantalla completa */}
+      {lightboxIndex !== null && galleryImages[lightboxIndex] && (
+        <div className="fixed inset-0 z-[80] bg-black/95 flex items-center justify-center p-3 sm:p-8">
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-3 right-3 z-10 p-2 border border-white/25 bg-black/60 text-white hover:border-[#FACC15] hover:text-[#FACC15]"
+            aria-label="Cerrar visor de fotos"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="relative w-full max-w-4xl flex flex-col items-center gap-3">
+            <SafeImage
+              src={galleryImages[lightboxIndex]}
+              alt={`${batch.cropName} ampliada`}
+              fallbackType="product"
+              cropHint={batch.cropName}
+              className="max-h-[76vh] w-auto max-w-full object-contain border border-[#1E293B] bg-[#0A0A0A]"
+            />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setLightboxIndex((current) =>
+                    current === null ? 0 : (current - 1 + galleryImages.length) % galleryImages.length,
+                  )
+                }
+                className="p-2 border border-white/25 text-white hover:border-[#FACC15] hover:text-[#FACC15]"
+                aria-label="Foto anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="font-mono text-[10px] text-[#CCCCCC]">
+                {lightboxIndex + 1} / {galleryImages.length}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setLightboxIndex((current) =>
+                    current === null ? 0 : (current + 1) % galleryImages.length,
+                  )
+                }
+                className="p-2 border border-white/25 text-white hover:border-[#FACC15] hover:text-[#FACC15]"
+                aria-label="Foto siguiente"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Direct Message with Producer Modal */}
       <DirectMessageModal

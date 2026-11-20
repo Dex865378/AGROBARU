@@ -2,12 +2,24 @@ import bananaImg from '@/assets/products/banana.webp';
 import cacaoImg from '@/assets/products/cacao.webp';
 import platanoImg from '@/assets/products/platano.webp';
 import cafeImg from '@/assets/products/cafe.webp';
+import bananaDetailImg from '@/assets/products/banana-detail.webp';
+import cacaoDetailImg from '@/assets/products/cacao-detail.webp';
+import platanoDetailImg from '@/assets/products/platano-detail.webp';
+import cafeDetailImg from '@/assets/products/cafe-detail.webp';
 
 export const BUNDLED_CROP_IMAGES = {
   banana: bananaImg,
   cacao: cacaoImg,
   platano: platanoImg,
   cafe: cafeImg,
+};
+
+/** Segunda toma (detalle) por cultivo para que la galería no dependa de una sola foto. */
+export const CROP_DETAIL_IMAGES = {
+  banana: bananaDetailImg,
+  cacao: cacaoDetailImg,
+  platano: platanoDetailImg,
+  cafe: cafeDetailImg,
 };
 
 export function getCropImageByName(cropName?: string): string {

@@ -1,6 +1,7 @@
 import { UserProfile, ReputationTier, OrderReview } from '../types';
 import { db, COLLECTIONS, saveDocument } from './firebase';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { optimizeAvatar } from '@/lib/imageOptimizer';
 
 /**
  * Computes the Reputation Tier and visual badge styling
@@ -99,45 +100,6 @@ export async function checkUsernameAvailability(
  * Converts an image file to optimized Base64 string for instant preview & avatar persistence
  */
 export async function processAvatarUpload(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('El archivo seleccionado debe ser una imagen (PNG, JPG, WebP).'));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_SIZE = 256;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
-          }
-        } else {
-          if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        resolve(dataUrl);
-      };
-      img.onerror = () => reject(new Error('Error al decodificar la imagen.'));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error('Error al leer el archivo.'));
-    reader.readAsDataURL(file);
-  });
+  const optimized = await optimizeAvatar(file);
+  return optimized.dataUrl;
 }

@@ -103,6 +103,7 @@ interface AppStateContextValue {
     status?: 'available' | 'in_production' | 'reserved' | 'sold_out',
     additionalQuantityKg?: number
   ) => Promise<void>;
+  updateBatchImages: (batchId: string, images: string[]) => Promise<void>;
   updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
   processSyncQueue: () => Promise<void>;
   refreshAlerts: () => void;
@@ -862,6 +863,31 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode; initialRole
     }
   };
 
+  const updateBatchImages = async (batchId: string, images: string[]) => {
+    let updatedTarget: ProductBatch | null = null;
+    setBatches(prev => {
+      const updated = prev.map(b => {
+        if (b.id !== batchId) return b;
+        const item: ProductBatch = {
+          ...b,
+          images,
+          imageUpdatedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        updatedTarget = item;
+        return item;
+      });
+      localStorage.setItem('agrobaru_batches', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (updatedTarget && !isOffline) {
+      try {
+        await saveDocument(COLLECTIONS.BATCHES, updatedTarget);
+      } catch {}
+    }
+  };
+
   const deleteProductBatch = async (batchId: string) => {
     let deletedBatch: ProductBatch | undefined;
     setBatches(prev => {
@@ -1025,6 +1051,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode; initialRole
         initiateMultiBatchEscrowCheckout,
         advanceEscrowStatus,
         updateBatchStockAndStatus,
+        updateBatchImages,
         updateUserProfile,
         processSyncQueue,
         refreshAlerts,

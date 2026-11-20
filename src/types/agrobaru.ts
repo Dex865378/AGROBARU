@@ -62,6 +62,7 @@ export interface UserProfile {
   community: BaruCommunity;
   role: UserRole | null;
   photoURL?: string | null;
+  bannerUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

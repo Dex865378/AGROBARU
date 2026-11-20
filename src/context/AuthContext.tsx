@@ -47,7 +47,7 @@ interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   setRole: (role: UserRole, community?: BaruCommunity) => Promise<void>;
-  updateProfileData: (patch: Partial<Pick<UserProfile, 'name' | 'community'>>) => Promise<void>;
+  updateProfileData: (patch: Partial<Pick<UserProfile, 'name' | 'community' | 'photoURL' | 'bannerUrl'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -62,6 +62,7 @@ function toProfile(uid: string, data: DocumentData): UserProfile {
     community: (data.community as BaruCommunity) || 'Otro',
     role: data.role === 'productor' || data.role === 'consumidor' ? data.role : null,
     photoURL: typeof data.photoURL === 'string' ? data.photoURL : null,
+    bannerUrl: typeof data.bannerUrl === 'string' ? data.bannerUrl : null,
     createdAt: typeof data.createdAt === 'string' ? data.createdAt : undefined,
     updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : undefined,
   };
@@ -281,7 +282,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const updateProfileData = useCallback(
-    async (patch: Partial<Pick<UserProfile, 'name' | 'community'>>) => {
+    async (patch: Partial<Pick<UserProfile, 'name' | 'community' | 'photoURL' | 'bannerUrl'>>) => {
       if (!user) throw new Error('No hay una sesión activa.');
       const now = new Date().toISOString();
       const previousProfile = profile;

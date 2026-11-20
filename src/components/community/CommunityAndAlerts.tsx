@@ -20,7 +20,11 @@ import {
   UserPlus,
   Trash2,
   Lock,
-  ThumbsUp
+  ThumbsUp,
+  Smile,
+  Sticker,
+  Heart,
+  Laugh
 } from 'lucide-react';
 import { PestAlertEngine } from '@/components/alerts/PestAlertEngine';
 import { useAppState } from '@/context/AppStateContext';
@@ -32,6 +36,8 @@ import { Input } from '@/components/ui/input';
 import { DirectMessageModal, ChatContact } from '@/components/chat/DirectMessageModal';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { BUNDLED_CROP_IMAGES, createInitialsAvatarDataUri } from '@/lib/imageFallbacks';
+import { PublicProfileModal, PublicProfileTarget } from '@/components/profile/PublicProfileModal';
+import { optimizeChatImage } from '@/lib/imageOptimizer';
 
 interface CommunityMessage {
   id: string;
@@ -49,6 +55,8 @@ interface CommunityMessage {
   };
   likes: number;
   hasLiked?: boolean;
+  sticker?: string;
+  reactions?: Record<string, string[]>;
 }
 
 interface CommunityGroup {
@@ -172,11 +180,38 @@ export const CommunityAndAlerts: React.FC = () => {
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [selectedChatContact, setSelectedChatContact] = useState<ChatContact | null>(null);
+  const [activePublicProfile, setActivePublicProfile] = useState<PublicProfileTarget | null>(null);
+  const [isStickerPanelOpen, setIsStickerPanelOpen] = useState(false);
+  const [messagesHydrated, setMessagesHydrated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
 
   const currentMessages = groupMessages[activeGroupId] || [];
   const isAdmin = currentUser.name.includes('Dionisio') || currentUser.role === 'cooperative';
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('agrobaru_community_messages_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') setGroupMessages(parsed);
+      }
+    } catch {}
+    setMessagesHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!messagesHydrated) return;
+    try {
+      localStorage.setItem('agrobaru_community_messages_v1', JSON.stringify(groupMessages));
+    } catch {}
+  }, [groupMessages, messagesHydrated]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [activeGroupId, currentMessages.length]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,6 +226,8 @@ export const CommunityAndAlerts: React.FC = () => {
       roleBadge: currentUser.role === 'farmer' ? 'Productor Barú' : currentUser.role === 'buyer' ? 'Comprador' : 'Inspector MIDA',
       text: inputText.trim(),
       imageUrl: attachedImage || undefined,
+      sticker: undefined,
+      reactions: {},
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       replyTo: replyingTo ? {
         senderName: replyingTo.senderName,
@@ -222,6 +259,55 @@ export const CommunityAndAlerts: React.FC = () => {
         };
       })
     }));
+  };
+
+  const handleToggleReaction = (msgId: string, emoji: string) => {
+    setGroupMessages((prev) => ({
+      ...prev,
+      [activeGroupId]: (prev[activeGroupId] || []).map((message) => {
+        if (message.id !== msgId) return message;
+        const reactions = { ...(message.reactions || {}) };
+        const users = reactions[emoji] || [];
+        const alreadyReacted = users.includes(currentUser.id);
+        const nextUsers = alreadyReacted
+          ? users.filter((id) => id !== currentUser.id)
+          : [...users, currentUser.id];
+        if (nextUsers.length === 0) delete reactions[emoji];
+        else reactions[emoji] = nextUsers;
+        return { ...message, reactions };
+      }),
+    }));
+  };
+
+  const handleSendSticker = (sticker: string) => {
+    const newMsg: CommunityMessage = {
+      id: `MSG-${Date.now()}`,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderUsername: currentUser.username || `@${currentUser.name.toLowerCase().replace(/\s+/g, '_')}`,
+      senderAvatar: currentUser.photoURL || createInitialsAvatarDataUri(currentUser.name),
+      roleBadge: currentUser.role === 'farmer' ? 'Productor Barú' : currentUser.role === 'buyer' ? 'Comprador' : 'Inspector MIDA',
+      text: '',
+      sticker,
+      reactions: {},
+      likes: 0,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setGroupMessages((prev) => ({
+      ...prev,
+      [activeGroupId]: [...(prev[activeGroupId] || []), newMsg],
+    }));
+    setIsStickerPanelOpen(false);
+  };
+
+  const handleOpenAuthorProfile = (msg: CommunityMessage) => {
+    setActivePublicProfile({
+      id: msg.senderId,
+      name: msg.senderName,
+      avatar: msg.senderAvatar,
+      role: msg.roleBadge,
+      location: activeGroup.corregimiento,
+    });
   };
 
   const handleApproveMember = (reqId: string, memberName: string) => {
@@ -257,13 +343,17 @@ export const CommunityAndAlerts: React.FC = () => {
 
   const handleAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setAttachedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setAttachedImage(preview);
+    // La compresión ocurre en segundo plano; la vista previa aparece al instante.
+    optimizeChatImage(file)
+      .then((optimized) => {
+        setAttachedImage((current) => (current === preview ? optimized.dataUrl : current));
+      })
+      .catch(() => {})
+      .finally(() => URL.revokeObjectURL(preview));
+    e.target.value = '';
   };
 
   const [activeSection, setActiveSection] = useState<'ALERTS' | 'COMMUNITY'>('ALERTS');
@@ -489,7 +579,7 @@ export const CommunityAndAlerts: React.FC = () => {
           )}
 
           {/* Group Messages Feed */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0A0A0A]/85 text-xs">
+          <div ref={messagesContainerRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0A0A0A]/85 text-xs">
             <div className="text-center">
               <span className="bg-[#141414] text-[#9E9E9E] px-3 py-1 text-[9px] border border-[#1E293B] inline-flex items-center gap-1.5">
                 <ShieldCheck className="w-3 h-3 text-[#15803D]" />
@@ -522,22 +612,12 @@ export const CommunityAndAlerts: React.FC = () => {
                       fallbackType="avatar"
                       nameHint={msg.senderName}
                       className="w-7 h-7 object-cover border border-[#15803D] cursor-pointer shrink-0"
-                      onClick={() => setSelectedChatContact({
-                        id: msg.senderId,
-                        name: msg.senderName,
-                        corregimiento: activeGroup.corregimiento,
-                        avatar: msg.senderAvatar
-                      })}
+                      onClick={() => handleOpenAuthorProfile(msg)}
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
-                          onClick={() => setSelectedChatContact({
-                            id: msg.senderId,
-                            name: msg.senderName,
-                            corregimiento: activeGroup.corregimiento,
-                            avatar: msg.senderAvatar
-                          })}
+                          onClick={() => handleOpenAuthorProfile(msg)}
                           className="font-bold text-[#E5E5E5] hover:text-[#15803D] cursor-pointer"
                         >
                           {msg.senderName}
@@ -552,9 +632,33 @@ export const CommunityAndAlerts: React.FC = () => {
                 </div>
 
                 {/* Message Body */}
-                <p className="font-sans text-xs text-[#CCCCCC] leading-relaxed whitespace-pre-wrap">
-                  {msg.text}
-                </p>
+                {msg.text && (
+                  <p className="font-sans text-xs text-[#CCCCCC] leading-relaxed whitespace-pre-wrap">
+                    {msg.text}
+                  </p>
+                )}
+
+                {msg.sticker && (
+                  <div className="text-5xl leading-none py-1 select-none" aria-label={`Sticker ${msg.sticker}`}>
+                    {msg.sticker}
+                  </div>
+                )}
+
+                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {Object.entries(msg.reactions).map(([emoji, users]) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => handleToggleReaction(msg.id, emoji)}
+                        className="flex items-center gap-1 bg-[#0A0A0A] border border-[#15803D]/40 px-1.5 py-0.5 text-[10px] hover:border-[#15803D]"
+                      >
+                        <span>{emoji}</span>
+                        <span className="text-[#9E9E9E] font-bold">{users.length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Attached Image */}
                 {msg.imageUrl && (
@@ -571,16 +675,31 @@ export const CommunityAndAlerts: React.FC = () => {
 
                 {/* Message Actions: Reply, Like & DM */}
                 <div className="pt-2 border-t border-[#1E293B]/60 flex flex-wrap items-center justify-between gap-2 text-[10px]">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => handleToggleLike(msg.id)}
                       className={`flex items-center gap-1 font-bold ${
                         msg.hasLiked ? 'text-[#15803D]' : 'text-[#666666] hover:text-[#E5E5E5]'
                       }`}
+                      title="Me gusta"
                     >
                       <ThumbsUp className="w-3 h-3" />
                       <span>{msg.likes > 0 && msg.likes}</span>
                     </button>
+
+                    <div className="flex items-center gap-1 bg-[#0A0A0A] border border-[#1E293B] px-1 py-0.5">
+                      {['👍', '❤️', '😂', '🙏'].map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => handleToggleReaction(msg.id, emoji)}
+                          className="text-[13px] leading-none hover:scale-125 transition-transform px-0.5"
+                          title={`Reaccionar con ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
 
                     <button
                       onClick={() => setReplyingTo(msg)}
@@ -642,8 +761,42 @@ export const CommunityAndAlerts: React.FC = () => {
             </div>
           )}
 
+          {/* Sticker Picker */}
+          {isStickerPanelOpen && (
+            <div className="border-t border-[#FACC15]/30 bg-[#121212] p-2 animate-fadeIn">
+              <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <span className="font-mono text-[9px] font-bold uppercase text-[#FACC15]">Stickers de campo</span>
+                <button type="button" onClick={() => setIsStickerPanelOpen(false)} className="text-[#666666] hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="grid grid-cols-8 gap-1">
+                {['🌱', '🍌', '🌾', '🚜', '💧', '☀️', '📦', '✅'].map((sticker) => (
+                  <button
+                    key={sticker}
+                    type="button"
+                    onClick={() => handleSendSticker(sticker)}
+                    className="text-xl sm:text-2xl py-1 border border-[#1E293B] bg-[#0A0A0A] hover:border-[#FACC15] hover:scale-110 transition-all"
+                    title={`Enviar ${sticker}`}
+                  >
+                    {sticker}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Message Input Box */}
           <form onSubmit={handleSendMessage} className="p-3 border-t border-[#1E293B] bg-[#0E0E0E] flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsStickerPanelOpen((open) => !open)}
+              className={`p-1.5 border bg-[#141414] ${isStickerPanelOpen ? 'text-[#FACC15] border-[#FACC15]' : 'text-[#666666] border-[#1E293B] hover:text-[#FACC15]'}`}
+              title="Abrir stickers"
+            >
+              <Sticker className="w-4 h-4" />
+            </button>
+
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -688,6 +841,13 @@ export const CommunityAndAlerts: React.FC = () => {
           </form>
         </div>
       )}
+
+      {/* Perfil público del autor del mensaje (solo lectura para otros usuarios) */}
+      <PublicProfileModal
+        open={!!activePublicProfile}
+        target={activePublicProfile}
+        onClose={() => setActivePublicProfile(null)}
+      />
 
       {/* Direct Private Message Modal */}
       <DirectMessageModal

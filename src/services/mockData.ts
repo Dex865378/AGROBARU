@@ -1,5 +1,5 @@
 import { Farm, CultivationLog, ProductBatch, EscrowOrder, DistrictMetric, UserProfile } from '../types';
-import { BUNDLED_CROP_IMAGES } from '../lib/imageFallbacks';
+import { BUNDLED_CROP_IMAGES, CROP_DETAIL_IMAGES } from '../lib/imageFallbacks';
 
 export const MOCK_USERS: UserProfile[] = [
   {
@@ -213,7 +213,7 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Banano Cavendish cultivado bajo prácticas agroforestales regenerativas en la llanura aluvial de Puerto Armuelles. Calibre uniforme de 42-46 mm, brix óptimo de 19-21° al madurar. Cero pesticidas sintéticos.',
     tags: ['Exportación', 'Orgánico', '100% Barú', 'Escrow Protegido', 'Trazabilidad SHA-256'],
-    images: [BUNDLED_CROP_IMAGES.banana],
+    images: [BUNDLED_CROP_IMAGES.banana, CROP_DETAIL_IMAGES.banana],
     status: 'available',
     originCoordinates: { lat: 8.2831, lng: -82.8624 },
     rootMerkleHash: '0922a08f218cfe3ee83f0d08ce5310f2d5b631a7f3c05c9873d8c03fdaef37f0',
@@ -239,7 +239,7 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Granos de cacao criollo fermentados en cajones de madera de laurel durante 6 días con secado solar en camas elevadas. Notas frutales a maracuyá y madera noble. Perfil para chocolatería fina.',
     tags: ['Chocolatería Fina', 'Fermentación Controlada', 'Secado Solar', 'Origen Limones'],
-    images: [BUNDLED_CROP_IMAGES.cacao],
+    images: [BUNDLED_CROP_IMAGES.cacao, CROP_DETAIL_IMAGES.cacao],
     status: 'available',
     originCoordinates: { lat: 8.2415, lng: -82.8850 },
     rootMerkleHash: 'bc220bd0f72374ae141e28f95d44710d487fe8b6cf0bab94b05a5fc8751b6d64',
@@ -265,7 +265,7 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Grado A',
     description: 'Plátano de tamaño gigante (dedos de 28-32 cm), pulpa densa de alto rendimiento culinario y para procesamiento agroindustrial de tostones y harinas.',
     tags: ['Almidón Alto', 'Agroindustria', 'Barú Tradición', 'Directo Finca'],
-    images: [BUNDLED_CROP_IMAGES.platano],
+    images: [BUNDLED_CROP_IMAGES.platano, CROP_DETAIL_IMAGES.platano],
     status: 'available',
     originCoordinates: { lat: 8.3120, lng: -82.7950 },
     rootMerkleHash: '3695d9a5382be9c963cb9457b8fe0243261c532c0b7de09ee45a6f5ee60ec853',
@@ -291,7 +291,7 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Café cosechado bajo sombra de guamos y plátanos. Despulpado en seco natural (proceso Honey), acidez málica brillante y crema espesa para espresso gourmet.',
     tags: ['Café Especial', 'Proceso Honey', 'Juventud Rural', 'Comercio Directo'],
-    images: [BUNDLED_CROP_IMAGES.cafe],
+    images: [BUNDLED_CROP_IMAGES.cafe, CROP_DETAIL_IMAGES.cafe],
     status: 'available',
     originCoordinates: { lat: 8.3450, lng: -82.9100 },
     rootMerkleHash: '111d99e8f8fa769fa448d6af9bb335ce8aee7ee91c5ab8a6b52737000ef6470e',
@@ -317,7 +317,7 @@ export const MOCK_BATCHES: ProductBatch[] = [
     qualityGrade: 'Premium Exportación',
     description: 'Lote de banano exportado en su totalidad mediante Escrow a Hamburgo. Stock agotado al 100%.',
     tags: ['Exportación', '100% Vendido'],
-    images: [BUNDLED_CROP_IMAGES.banana],
+    images: [BUNDLED_CROP_IMAGES.banana, CROP_DETAIL_IMAGES.banana],
     status: 'sold_out',
     originCoordinates: { lat: 8.2831, lng: -82.8624 },
     rootMerkleHash: '0922a08f218cfe3ee83f0d08ce5310f2d5b631a7f3c05c9873d8c03fdaef37f0',

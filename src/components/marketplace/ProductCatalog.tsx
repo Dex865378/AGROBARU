@@ -39,6 +39,7 @@ import { DeleteBatchModal } from './DeleteBatchModal';
 import { formatTimeAgo, getFreshnessTier, getRemainingPurgeHours } from '@/services/dateUtils';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { resolveProductImage } from '@/lib/imageFallbacks';
+import { PublicProfileModal, PublicProfileTarget } from '@/components/profile/PublicProfileModal';
 
 type CropCategory = 'ALL' | 'BANANO' | 'PLATANO' | 'CACAO' | 'FRUTAS' | 'AVAILABLE' | 'FAVORITES';
 type SortOption = 'newest' | 'price_asc' | 'stock_desc' | 'reputation_desc';
@@ -81,6 +82,7 @@ export const ProductCatalog: React.FC<{
   const [selectedBatchForSticker, setSelectedBatchForSticker] = useState<ProductBatch | null>(null);
   const [expandedReviewsBatchId, setExpandedReviewsBatchId] = useState<string | null>(null);
   const [selectedChatContact, setSelectedChatContact] = useState<ChatContact | null>(null);
+  const [selectedPublicProfile, setSelectedPublicProfile] = useState<PublicProfileTarget | null>(null);
 
   const toggleCardTechnicalView = (batchId: string) => {
     setExpandedTechnicalCards(prev => ({
@@ -437,19 +439,42 @@ export const ProductCatalog: React.FC<{
                     
                     <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 min-w-0">
                       <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span className="break-words">{batch.farmName} • <strong className="text-slate-200">{batch.producerName}</strong></span>
+                      <span className="break-words">
+                        {batch.farmName} •{' '}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedPublicProfile({
+                              id: batch.farmId,
+                              name: batch.producerName,
+                              role: 'productor',
+                              location: batch.corregimiento,
+                              reputation: batch.producerReputation,
+                            })
+                          }
+                          className="text-slate-200 font-bold hover:text-emerald-300 underline decoration-emerald-500/30 underline-offset-2"
+                          title={`Ver perfil de ${batch.producerName}`}
+                        >
+                          {batch.producerName}
+                        </button>
+                      </span>
                     </div>
                   </div>
 
-                  <div className="w-20 h-20 rounded-lg shrink-0 border border-slate-800 overflow-hidden bg-[#0B100D]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBatchForDetail(batch)}
+                    className="w-20 h-20 rounded-lg shrink-0 border border-slate-800 overflow-hidden bg-[#0B100D] group"
+                    title="Ver fotos del producto"
+                  >
                     <SafeImage
                       src={getCropThumbnail(batch)}
                       alt={batch.cropName}
                       fallbackType="product"
                       cropHint={batch.cropName}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
-                  </div>
+                  </button>
                 </div>
 
                 {/* Price & Stock Block */}
@@ -571,9 +596,18 @@ export const ProductCatalog: React.FC<{
 
                 {isReviewsOpen && (
                   <div className="pt-3 border-t border-slate-800">
-                    <BatchReviewsSection 
-                      batchId={batch.id} 
-                      producerName={batch.producerName} 
+                    <BatchReviewsSection
+                      batchId={batch.id}
+                      producerId={batch.farmId}
+                      producerName={batch.producerName}
+                      onOpenProfile={(target) =>
+                        setSelectedPublicProfile({
+                          id: target.id,
+                          name: target.name,
+                          role: target.role,
+                          location: batch.corregimiento,
+                        })
+                      }
                     />
                   </div>
                 )}
@@ -671,6 +705,7 @@ export const ProductCatalog: React.FC<{
         onClose={() => setSelectedBatchForDetail(null)}
         onOpenEscrowCheckout={(batch) => handleStartEscrow(batch, false)}
         onRequestSample={(batch) => handleStartEscrow(batch, true)}
+        onOpenProducerProfile={(target) => setSelectedPublicProfile(target)}
       />
 
       {/* Direct Single Escrow Checkout Modal */}
@@ -708,6 +743,14 @@ export const ProductCatalog: React.FC<{
         isOpen={!!batchToDelete}
         onClose={() => setBatchToDelete(null)}
         onConfirmDelete={deleteProductBatch}
+      />
+
+      {/* Perfil público del productor / comprador */}
+      <PublicProfileModal
+        open={!!selectedPublicProfile}
+        target={selectedPublicProfile}
+        onClose={() => setSelectedPublicProfile(null)}
+        onOpenProduct={(batch) => setSelectedBatchForDetail(batch)}
       />
     </div>
   );

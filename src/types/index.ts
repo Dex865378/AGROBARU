@@ -43,6 +43,8 @@ export interface UserProfile {
   midaRegistration?: string;
   badges?: string[];
   photoURL?: string;
+  /** Imagen larga tipo banner de WhatsApp Business detrás del avatar. */
+  bannerURL?: string;
   memberSince?: string;
   reviews?: OrderReview[];
 }

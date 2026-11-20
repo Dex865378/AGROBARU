@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Star, 
   MessageSquare, 
@@ -18,55 +18,39 @@ import { useNotification } from '@/context/NotificationContext';
 import { calculateReputationTier } from '@/services/reputationService';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { formatDateOnly } from '@/lib/utils';
+import { addReview, getReviewsForBatch, onReviewsUpdated } from '@/services/reviewsService';
 
 interface BatchReviewsSectionProps {
   batchId: string;
   producerName: string;
+  producerId?: string;
   initialReviews?: OrderReview[];
+  onOpenProfile?: (target: { id?: string; name: string; role?: string }) => void;
 }
 
 export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
   batchId,
   producerName,
-  initialReviews = []
+  producerId,
+  initialReviews = [],
+  onOpenProfile,
 }) => {
   const { currentUser, firebaseUser } = useAppState();
   const { language, translateText } = useLanguage();
   const { success, warning } = useNotification();
 
-  const [reviews, setReviews] = useState<OrderReview[]>(() => {
-    if (initialReviews.length > 0) return initialReviews;
-    return [
-      {
-        id: 'REV-101',
-        orderId: 'ESCROW-BARU-884920',
-        batchId,
-        authorId: 'BUYER-PAN-GLOBAL',
-        authorName: 'Hamburg Fruit Imports GMBH',
-        authorRole: 'buyer',
-        authorTier: 'DIAMOND_MIDA',
-        rating: 5,
-        comment: 'Excelente calidad y entrega puntual. Calibre 44 mm uniforme, cajas selladas con código QR verificado y sin mermas en corona.',
-        qualityCompliant: true,
-        onTimeDelivery: true,
-        createdAt: '2026-08-20',
-      },
-      {
-        id: 'REV-102',
-        orderId: 'ESCROW-BARU-773812',
-        batchId,
-        authorId: 'BUYER-USA-MIAMI',
-        authorName: 'Tropical Prime Corp (Miami)',
-        authorRole: 'buyer',
-        authorTier: 'GOLD',
-        rating: 5,
-        comment: 'Fruta recibida en temperatura óptima (13.5 °C). Los fondos de Escrow se liberaron de inmediato al escanear la entrega en aduana.',
-        qualityCompliant: true,
-        onTimeDelivery: true,
-        createdAt: '2026-08-15',
-      }
-    ];
-  });
+  const [reviews, setReviews] = useState<OrderReview[]>(() =>
+    getReviewsForBatch(batchId, producerName, producerId, initialReviews),
+  );
+
+  useEffect(() => {
+    setReviews(getReviewsForBatch(batchId, producerName, producerId, initialReviews));
+    return onReviewsUpdated(() => {
+      setReviews(getReviewsForBatch(batchId, producerName, producerId, initialReviews));
+    });
+    // initialReviews es una semilla; no debe reiniciar el estado en cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchId, producerName, producerId]);
 
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
@@ -102,6 +86,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
       createdAt: new Date().toISOString().split('T')[0],
     };
 
+    addReview(newReview, { producerId, producerName });
     setReviews(prev => [newReview, ...prev]);
     setComment('');
     setIsSubmitting(false);
@@ -150,7 +135,19 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <span className="font-bold text-[#E5E5E5] text-[11px]">{rev.authorName}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenProfile?.({
+                        id: rev.authorId,
+                        name: rev.authorName,
+                        role: rev.authorRole,
+                      })
+                    }
+                    className="font-bold text-[#E5E5E5] text-[11px] hover:text-emerald-300 text-left"
+                  >
+                    {rev.authorName}
+                  </button>
                   <Badge variant="purple" className="text-[8px]">
                     {rev.authorRole === 'buyer' ? 'Comprador Internacional' : 'Productor Barú'}
                   </Badge>

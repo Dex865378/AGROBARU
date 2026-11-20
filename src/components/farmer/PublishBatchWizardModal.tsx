@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAppState } from '@/context/AppStateContext';
-import { processAvatarUpload } from '@/services/reputationService';
+import { optimizeProductPhoto } from '@/lib/imageOptimizer';
 import { useNotification } from '@/context/NotificationContext';
 import { SafeImage } from '@/components/ui/SafeImage';
 
@@ -67,11 +67,15 @@ export const PublishBatchWizardModal: React.FC<PublishBatchWizardModalProps> = (
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setUploadedPhoto(preview);
     try {
-      const base64 = await processAvatarUpload(file);
-      setUploadedPhoto(base64);
+      const optimized = await optimizeProductPhoto(file);
+      setUploadedPhoto((current) => (current === preview ? optimized.dataUrl : current));
     } catch {
       warning('Formato inválido', 'Por favor selecciona una imagen JPG o PNG.');
+    } finally {
+      URL.revokeObjectURL(preview);
     }
   };
 

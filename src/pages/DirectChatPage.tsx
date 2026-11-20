@@ -25,6 +25,8 @@ import { ChatContact } from '@/components/chat/DirectMessageModal';
 import { ENTERPRISE_DIRECTORY, FARMER_DIRECTORY } from '@/services/directoryData';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { createInitialsAvatarDataUri } from '@/lib/imageFallbacks';
+import { PublicProfileModal } from '@/components/profile/PublicProfileModal';
+import { optimizeChatImage } from '@/lib/imageOptimizer';
 
 interface ChatMessage {
   id: string;
@@ -68,6 +70,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
   const [inputText, setInputText] = useState('');
   const [searchContactFilter, setSearchContactFilter] = useState('');
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -166,18 +169,19 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
         localStorage.setItem(storedKey, JSON.stringify(full));
         return full;
       });
-    }, 1200);
+    }, 450);
   };
 
   const handleAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setAttachedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setAttachedImage(preview);
+    optimizeChatImage(file)
+      .then((optimized) => setAttachedImage((current) => (current === preview ? optimized.dataUrl : current)))
+      .catch(() => {})
+      .finally(() => URL.revokeObjectURL(preview));
+    e.target.value = '';
   };
 
   return (
@@ -290,6 +294,13 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setProfileOpen(true)}
+                className="px-2.5 py-1 border border-[#15803D] text-[#10B981] text-[10px] font-bold hover:bg-[#15803D] hover:text-black transition-colors"
+              >
+                Ver perfil
+              </button>
               <Badge variant="yellow" className="text-[9px] flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-[#141414]" />
                 <span>Transacción Segura</span>
@@ -419,6 +430,19 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
           </form>
         </div>
       </div>
+      <PublicProfileModal
+        open={profileOpen}
+        target={{
+          id: activeContact.id,
+          name: activeContact.name,
+          role: activeContact.badge || 'productor',
+          avatar: activeContact.avatar,
+          location: activeContact.corregimiento,
+          reputation: activeContact.reputation,
+          phone: activeContact.phone,
+        }}
+        onClose={() => setProfileOpen(false)}
+      />
     </div>
   );
 };
