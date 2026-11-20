@@ -17,6 +17,12 @@ export interface OptimizeImageOptions {
   preserveAnimation?: boolean;
   /** Tamaño máximo del archivo animado que se acepta sin recomprimir. */
   maxAnimatedBytes?: number;
+  /**
+   * Ignora la etiqueta EXIF y usa los píxeles tal como están codificados.
+   * Necesario para wallpapers horizontales que traen un EXIF erróneo y, si se
+   * respeta, el navegador los guarda girados como si fueran verticales.
+   */
+  ignoreExif?: boolean;
 }
 
 export interface OptimizedImage {
@@ -217,6 +223,77 @@ function normalizeOrientation(
 }
 
 /**
+ * Elimina el bloque APP1/Exif del JPEG sin recomprimir la imagen. Así el
+ * navegador decodifica los píxeles reales y no aplica una orientación EXIF
+ * incorrecta (habitual en wallpapers descargados de Internet).
+ */
+async function stripJpegExif(file: File): Promise<Blob> {
+  if (!/^image\/jpe?g$/i.test(file.type)) return file;
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return file;
+
+    const parts: Uint8Array[] = [bytes.subarray(0, 2)];
+    let offset = 2;
+    let removed = false;
+
+    while (offset + 4 <= bytes.length) {
+      if (bytes[offset] !== 0xff) {
+        parts.push(bytes.subarray(offset));
+        break;
+      }
+      const marker = bytes[offset + 1];
+
+      if (marker === 0xff) {
+        offset += 1;
+        continue;
+      }
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        parts.push(bytes.subarray(offset, offset + 2));
+        offset += 2;
+        continue;
+      }
+      if (marker === 0xd9 || marker === 0xda) {
+        parts.push(bytes.subarray(offset));
+        break;
+      }
+
+      const segmentLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+      if (segmentLength < 2) {
+        parts.push(bytes.subarray(offset));
+        break;
+      }
+      const segmentEnd = offset + 2 + segmentLength;
+      if (segmentEnd > bytes.length) {
+        parts.push(bytes.subarray(offset));
+        break;
+      }
+
+      const isExif =
+        marker === 0xe1 &&
+        segmentLength >= 8 &&
+        bytes[offset + 4] === 0x45 &&
+        bytes[offset + 5] === 0x78 &&
+        bytes[offset + 6] === 0x69 &&
+        bytes[offset + 7] === 0x66;
+
+      if (isExif) {
+        removed = true;
+      } else {
+        parts.push(bytes.subarray(offset, segmentEnd));
+      }
+      offset = segmentEnd;
+    }
+
+    if (!removed) return file;
+    return new Blob(parts.map((part) => part.slice().buffer), { type: file.type });
+  } catch {
+    return file;
+  }
+}
+
+/**
  * Acepta la imagen y devuelve un data URL comprimido. Si es un GIF/APNG
  * animado por debajo del límite se devuelve tal cual para mantener el
  * movimiento del banner.
@@ -236,6 +313,7 @@ export async function optimizeImage(
     cropAspect,
     preserveAnimation = false,
     maxAnimatedBytes = 650 * 1024,
+    ignoreExif = false,
   } = options;
 
   const originalBytes = file.size;
@@ -251,7 +329,10 @@ export async function optimizeImage(
     };
   }
 
-  const fileMeta = await readImageFileMeta(file);
+  const decodeFile = ignoreExif ? await stripJpegExif(file) : file;
+  const fileMeta = ignoreExif
+    ? { orientation: 1, rawWidth: 0, rawHeight: 0 }
+    : await readImageFileMeta(file);
 
   // Deja que el navegador pinte la vista previa antes del trabajo pesado.
   await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
@@ -265,7 +346,7 @@ export async function optimizeImage(
 
   try {
     if (typeof createImageBitmap === 'function') {
-      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      bitmap = await createImageBitmap(decodeFile, { imageOrientation: 'from-image' });
       source = bitmap;
       naturalWidth = bitmap.width;
       naturalHeight = bitmap.height;
@@ -275,7 +356,7 @@ export async function optimizeImage(
   }
 
   if (!source) {
-    const image = await loadImage(file);
+    const image = await loadImage(decodeFile);
     source = image;
     naturalWidth = image.naturalWidth || image.width;
     naturalHeight = image.naturalHeight || image.height;
@@ -377,6 +458,7 @@ export const optimizeBanner = (file: File) =>
     quality: 0.82,
     preserveAnimation: true,
     maxAnimatedBytes: 600 * 1024,
+    ignoreExif: true,
   });
 
 export const optimizeProductPhoto = (file: File) =>
