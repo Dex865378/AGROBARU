@@ -129,6 +129,19 @@ service cloud.firestore {
       }
     }
 
+    // 9.1 Preferencias personales (tema, idioma, notificaciones y privacidad)
+    match /userPreferences/{userId} {
+      allow read, create, update: if request.auth != null
+        && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // 9.2 Auditoría de acciones administrativas (solo administrador)
+    match /adminAuditLogs/{entryId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // 10. Reseñas de compradores (lectura pública, autoría autenticada)
     match /orderReviews/{reviewId} {
       allow read: if true;

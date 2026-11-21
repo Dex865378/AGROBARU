@@ -50,7 +50,7 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
   initialMessage
 }) => {
   const { language } = useLanguage();
-  const { messages, loading, error, isRemote, sendMessage } = useDirectChat(
+  const { messages, loading, error, isRemote, otherTyping, sendMessage, notifyTyping } = useDirectChat(
     isOpen ? contact : null,
     isOpen,
   );
@@ -103,7 +103,7 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
                 {contact.name}
               </DialogTitle>
               <Badge variant={isRemote ? 'live-green' : 'outline'} className="text-[9px] py-0.5">
-                {isRemote ? 'En vivo' : 'Perfil de ejemplo'}
+                {otherTyping ? 'Escribiendo…' : isRemote ? 'En vivo' : 'Perfil de ejemplo'}
               </Badge>
             </div>
             
@@ -175,7 +175,7 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
                   <SafeImage src={msg.imageUrl} alt="Adjunto" fallbackType="product" className="max-h-44 w-full object-cover" />
                 </div>
               )}
-              <p className="font-sans text-xs">{msg.text}</p>
+              <p data-no-translate className="font-sans text-xs">{msg.text}</p>
               
               <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-[#666666]">
                 <span>{msg.timestamp}</span>
@@ -193,7 +193,10 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
       <form onSubmit={handleSendMessage} className="p-3 border-t border-[#1E293B] bg-[#0E0E0E] flex items-center gap-2">
         <Input
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={(e) => {
+            setInputText(e.target.value);
+            notifyTyping(e.target.value);
+          }}
           placeholder={`Escribe a ${contact.name.split(' ')[0]}...`}
           className="font-mono text-xs border-[#1E293B] focus-visible:border-[#15803D]"
         />

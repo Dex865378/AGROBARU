@@ -13,6 +13,10 @@ import {
   MessageSquare,
   Package,
   Phone,
+  BarChart3,
+  Eye,
+  Heart,
+  Settings2,
   ShieldCheck,
   Star,
   X,
@@ -25,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { ProfileBanner } from '@/components/profile/ProfileBanner';
+import { UserSettingsPanel } from '@/components/profile/UserSettingsPanel';
 import { processAvatarUpload, calculateReputationTier, checkUsernameAvailability } from '@/services/reputationService';
 import {
   getReviewsForProducer,
@@ -35,16 +40,17 @@ import {
 } from '@/services/reviewsService';
 import { optimizeBanner } from '@/lib/imageOptimizer';
 import { formatUsd } from '@/lib/utils';
+import { getTotalBatchViews } from '@/services/analyticsService';
 import { UserProfile, OrderReview } from '@/types';
 
 interface ProfilePageProps {
   onBack: () => void;
 }
 
-type ProfileTab = 'RESUMEN' | 'EDITAR' | 'RESENAS' | 'PRODUCTOS';
+type ProfileTab = 'RESUMEN' | 'EDITAR' | 'RESENAS' | 'PRODUCTOS' | 'AJUSTES';
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
-  const { currentUser, orders, batches, updateUserProfile } = useAppState();
+  const { currentUser, orders, batches, updateUserProfile, favorites } = useAppState();
   const { language } = useLanguage();
   const { success, warning, error } = useNotification();
 
@@ -137,6 +143,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   );
   const purchasedKg = myOrders.reduce((sum, order) => sum + order.quantityKg, 0);
   const purchasedUsd = myOrders.reduce((sum, order) => sum + order.totalUsd, 0);
+  const totalBatchViews = useMemo(
+    () => getTotalBatchViews(myBatches.map((batch) => batch.id)),
+    [myBatches],
+  );
+  const favoriteBatchCount = useMemo(
+    () => myBatches.filter((batch) => favorites.includes(batch.id)).length,
+    [favorites, myBatches],
+  );
 
   const roleLabel =
     currentUser.role === 'farmer'
@@ -341,13 +355,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
             </div>
           </div>
 
+          {isProducer && (
+            <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
+              <div className="bg-[#0E1A13] border border-[#15803D]/30 px-1 py-2">
+                <Eye className="w-3 h-3 mx-auto text-[#10B981]" />
+                <div className="mt-0.5 text-sm font-display font-black text-[#10B981]">{totalBatchViews}</div>
+                <div className="text-[7px] text-[#9E9E9E] uppercase">Vistas</div>
+              </div>
+              <div className="bg-[#141414] border border-[#1E293B] px-1 py-2">
+                <Heart className="w-3 h-3 mx-auto text-[#FACC15]" />
+                <div className="mt-0.5 text-sm font-display font-black text-[#FACC15]">{favoriteBatchCount}</div>
+                <div className="text-[7px] text-[#9E9E9E] uppercase">Guardados</div>
+              </div>
+              <div className="bg-[#141414] border border-[#1E293B] px-1 py-2">
+                <BarChart3 className="w-3 h-3 mx-auto text-[#7C3AED]" />
+                <div className="mt-0.5 text-sm font-display font-black text-[#A78BFA]">{myBatches.length}</div>
+                <div className="text-[7px] text-[#9E9E9E] uppercase">Lotes</div>
+              </div>
+            </div>
+          )}
+
           {/* Pestañas para no saturar la vista */}
-          <div className="grid grid-cols-4 border-b border-[#1E293B] mt-4 text-[9px]">
+          <div className="grid grid-cols-5 border-b border-[#1E293B] mt-4 text-[8px] sm:text-[9px]">
             {[
               { id: 'RESUMEN' as const, label: 'Resumen', icon: LayoutDashboard },
               { id: 'EDITAR' as const, label: 'Editar', icon: Edit3 },
               { id: 'PRODUCTOS' as const, label: isProducer ? 'Productos' : 'Compras', icon: Package },
               { id: 'RESENAS' as const, label: 'Reseñas', icon: Star },
+              { id: 'AJUSTES' as const, label: 'Ajustes', icon: Settings2 },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -550,6 +585,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
                   ))
                 )}
               </div>
+            )}
+
+            {activeTab === 'AJUSTES' && (
+              <UserSettingsPanel userId={currentUser.id} />
             )}
 
             {activeTab === 'RESENAS' && (

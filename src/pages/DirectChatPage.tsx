@@ -70,7 +70,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const autoSelectedContactRef = useRef(false);
 
-  const { messages, loading: chatLoading, error: chatError, isRemote, sendMessage } = useDirectChat(
+  const { messages, loading: chatLoading, error: chatError, isRemote, otherTyping, sendMessage, notifyTyping } = useDirectChat(
     activeContact,
     true,
   );
@@ -301,7 +301,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                     {activeContact.name}
                   </h3>
                   <Badge variant={isRemote ? 'live-green' : 'outline'} className="text-[8px] py-0 shrink-0">
-                    {isRemote ? 'En vivo' : 'Ejemplo'}
+                    {otherTyping ? 'Escribiendo…' : isRemote ? 'En vivo' : 'Ejemplo'}
                   </Badge>
                 </div>
                 <p className="text-[10px] text-[#9E9E9E] truncate">
@@ -377,7 +377,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                     </div>
                   )}
 
-                  <p className="font-sans text-xs leading-relaxed whitespace-pre-wrap">
+                  <p data-no-translate className="font-sans text-xs leading-relaxed whitespace-pre-wrap">
                     {msg.text}
                   </p>
 
@@ -455,7 +455,10 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
 
             <Input
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                notifyTyping(e.target.value);
+              }}
               placeholder={`Escribe a ${activeContact.name}...`}
               className="font-mono text-xs border-[#1E293B] focus-visible:border-[#15803D] bg-[#0A0A0A]"
             />

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { shouldSkipTranslation, translateInterfacePhrase } from '@/lib/autoTranslate';
 
 export type Language = 'es' | 'en';
 
@@ -134,6 +135,114 @@ const agriculturalGlossary: Record<string, string> = {
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
+interface TranslatedTextRecord {
+  original: string;
+  rendered: string;
+}
+
+const translatedTextNodes = new WeakMap<Text, TranslatedTextRecord>();
+const translatedAttributes = new WeakMap<Element, Record<string, TranslatedTextRecord>>();
+const TRANSLATED_ATTRIBUTES = ['placeholder', 'title', 'aria-label'] as const;
+
+function translateTextNode(node: Text): void {
+  if (shouldSkipTranslation(node)) return;
+  const current = node.nodeValue || '';
+  if (!current.trim()) return;
+
+  const existing = translatedTextNodes.get(node);
+  if (existing && existing.rendered === current) return;
+
+  const translated = translateInterfacePhrase(current);
+  if (translated === current) {
+    // Si React ya cambió el nodo a otro idioma, neutraliza el registro viejo.
+    if (existing) translatedTextNodes.set(node, { original: current, rendered: current });
+    return;
+  }
+
+  translatedTextNodes.set(node, { original: current, rendered: translated });
+  node.nodeValue = translated;
+}
+
+function restoreTextNode(node: Text): void {
+  const record = translatedTextNodes.get(node);
+  if (record && node.nodeValue === record.rendered) {
+    node.nodeValue = record.original;
+  }
+}
+
+function translateElementAttributes(element: Element): void {
+  if (element.closest('[data-no-translate]')) return;
+  const records = translatedAttributes.get(element) || {};
+
+  TRANSLATED_ATTRIBUTES.forEach((name) => {
+    const current = element.getAttribute(name);
+    if (!current || !current.trim()) return;
+    const existing = records[name];
+    if (existing && existing.rendered === current) return;
+
+    const translated = translateInterfacePhrase(current);
+    if (translated === current) {
+      if (existing) records[name] = { original: current, rendered: current };
+      return;
+    }
+    records[name] = { original: current, rendered: translated };
+    element.setAttribute(name, translated);
+  });
+
+  if (Object.keys(records).length > 0) translatedAttributes.set(element, records);
+}
+
+function restoreElementAttributes(element: Element): void {
+  const records = translatedAttributes.get(element);
+  if (!records) return;
+  TRANSLATED_ATTRIBUTES.forEach((name) => {
+    const record = records[name];
+    if (record && element.getAttribute(name) === record.rendered) {
+      element.setAttribute(name, record.original);
+    }
+  });
+}
+
+function translateTree(root: Node): void {
+  if (root.nodeType === Node.TEXT_NODE) {
+    translateTextNode(root as Text);
+    return;
+  }
+  if (!(root instanceof Element)) return;
+
+  translateElementAttributes(root);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let current = walker.nextNode();
+  while (current) {
+    if (current.nodeType === Node.TEXT_NODE) {
+      translateTextNode(current as Text);
+    } else {
+      translateElementAttributes(current as Element);
+    }
+    current = walker.nextNode();
+  }
+}
+
+function restoreTree(root: Node): void {
+  if (root.nodeType === Node.TEXT_NODE) {
+    restoreTextNode(root as Text);
+    return;
+  }
+  if (!(root instanceof Element)) return;
+
+  restoreElementAttributes(root);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let current = walker.nextNode();
+  while (current) {
+    if (current.nodeType === Node.TEXT_NODE) {
+      restoreTextNode(current as Text);
+    } else {
+      restoreElementAttributes(current as Element);
+    }
+    current = walker.nextNode();
+  }
+}
+
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('agrobaru_lang');
@@ -143,7 +252,58 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('agrobaru_lang', lang);
+    window.dispatchEvent(new CustomEvent('agrobaru:language-changed', { detail: lang }));
   };
+
+  // Traduce toda la interfaz visible sin depender de internet. Los textos
+  // dinámicos que no están en el diccionario se dejan intactos.
+  useEffect(() => {
+    document.documentElement.lang = language;
+
+    if (language === 'es') {
+      if (document.body) restoreTree(document.body);
+      return;
+    }
+
+    let frame = 0;
+    const run = () => {
+      if (!document.body) return;
+      translateTree(document.body);
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(run);
+    };
+
+    const timeout = window.setTimeout(schedule, 0);
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'characterData' && mutation.target.nodeType === Node.TEXT_NODE) {
+          translateTextNode(mutation.target as Text);
+          return;
+        }
+        if (mutation.type === 'attributes' && mutation.target instanceof Element) {
+          translateElementAttributes(mutation.target);
+          return;
+        }
+        mutation.addedNodes.forEach((node) => translateTree(node));
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: [...TRANSLATED_ATTRIBUTES],
+    });
+
+    return () => {
+      window.clearTimeout(timeout);
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [language]);
 
   const t = (key: string, defaultText?: string): string => {
     return translations[language]?.[key] || defaultText || key;

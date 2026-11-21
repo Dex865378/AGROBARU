@@ -13,7 +13,7 @@ import {
 import { NotificationProvider } from '@/context/NotificationContext';
 import { AppStateProvider, useAppState } from '@/context/AppStateContext';
 import type { UserRole } from '@/types';
-import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { BackgroundGrid } from '@/components/aceternity/BackgroundGrid';
@@ -42,6 +42,7 @@ import { HelpFaqModal } from '@/components/legal/HelpFaqModal';
 import { QuickHelpWidget } from '@/components/legal/QuickHelpWidget';
 import { CartDrawerModal } from '@/components/marketplace/CartDrawerModal';
 import { NewUserAssistant } from '@/components/onboarding/NewUserAssistant';
+import { useUnreadDirectChats } from '@/hooks/useUnreadDirectChats';
 
 const CalculatorView: React.FC = () => {
   const { language } = useLanguage();
@@ -102,7 +103,8 @@ const MainLayout: React.FC<{ roleLocked?: boolean; initialTab?: string }> = ({
   roleLocked,
   initialTab = 'home',
 }) => {
-  const { cart, currentUser, currentRole } = useAppState();
+  const { cart, currentUser, currentRole, firebaseUser } = useAppState();
+  const chatUnreadCount = useUnreadDirectChats(firebaseUser?.uid);
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [marketplaceSubTab, setMarketplaceSubTab] = useState<'catalog' | 'orders'>('catalog');
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
@@ -289,6 +291,11 @@ const MainLayout: React.FC<{ roleLocked?: boolean; initialTab?: string }> = ({
           setUnreadNotifications(0);
         }}
         unreadCount={unreadNotifications}
+        chatUnreadCount={chatUnreadCount}
+        onOpenChatInbox={() => {
+          setActiveChatContact(null);
+          navigateToTab('chat');
+        }}
         cartCount={cart.length}
         onOpenCart={() => setIsCartOpen(true)}
         roleLocked={roleLocked}
@@ -426,6 +433,11 @@ const MainLayout: React.FC<{ roleLocked?: boolean; initialTab?: string }> = ({
       <NotificationCenterModal
         open={isNotificationsOpen}
         onOpenChange={setIsNotificationsOpen}
+        chatUnreadCount={chatUnreadCount}
+        onOpenChat={() => {
+          setActiveChatContact(null);
+          navigateToTab('chat');
+        }}
         onNavigate={(route) => {
           if (route === 'pest_engine' || route === 'pest-radar' || route === 'alerts') {
             setActiveTab('alerts');
@@ -492,11 +504,9 @@ export function App({
 } = {}) {
   return (
     <NotificationProvider>
-      <LanguageProvider>
-        <AppStateProvider initialRole={initialRole}>
-          <MainLayout roleLocked={roleLocked} initialTab={initialTab} />
-        </AppStateProvider>
-      </LanguageProvider>
+      <AppStateProvider initialRole={initialRole}>
+        <MainLayout roleLocked={roleLocked} initialTab={initialTab} />
+      </AppStateProvider>
     </NotificationProvider>
   );
 }

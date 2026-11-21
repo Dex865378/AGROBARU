@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Search, 
   Filter, 
@@ -21,7 +21,11 @@ import {
   Timer,
   Heart,
   ArrowUpDown,
-  Plus
+  Plus,
+  Bookmark,
+  BookmarkPlus,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { useAppState } from '@/context/AppStateContext';
 import { ProductBatch } from '@/types';
@@ -40,6 +44,15 @@ import { formatTimeAgo, getFreshnessTier, getRemainingPurgeHours } from '@/servi
 import { SafeImage } from '@/components/ui/SafeImage';
 import { resolveProductImage } from '@/lib/imageFallbacks';
 import { PublicProfileModal, PublicProfileTarget } from '@/components/profile/PublicProfileModal';
+import { trackBatchView } from '@/services/analyticsService';
+import {
+  countNewSavedSearchMatches,
+  getSavedSearches,
+  markSavedSearchSeen,
+  removeSavedSearch,
+  saveSearch,
+  SavedSearch,
+} from '@/services/savedSearchService';
 
 type CropCategory = 'ALL' | 'BANANO' | 'PLATANO' | 'CACAO' | 'FRUTAS' | 'AVAILABLE' | 'FAVORITES';
 type SortOption = 'newest' | 'price_asc' | 'stock_desc' | 'reputation_desc';
@@ -79,6 +92,8 @@ export const ProductCatalog: React.FC<{
   const [batchToDelete, setBatchToDelete] = useState<ProductBatch | null>(null);
 
   const [selectedBatchForDetail, setSelectedBatchForDetail] = useState<ProductBatch | null>(null);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => getSavedSearches(currentUser.id));
+  const [newSearchMatches, setNewSearchMatches] = useState(0);
   const [selectedBatchForPassport, setSelectedBatchForPassport] = useState<ProductBatch | null>(null);
   const [selectedBatchForSticker, setSelectedBatchForSticker] = useState<ProductBatch | null>(null);
   const [expandedReviewsBatchId, setExpandedReviewsBatchId] = useState<string | null>(null);
@@ -124,6 +139,50 @@ export const ProductCatalog: React.FC<{
       (Boolean(currentUser.username) &&
         normalize(currentUser.username) === normalize(batch.producerUsername))
     );
+  };
+
+  useEffect(() => {
+    const next = getSavedSearches(currentUser.id);
+    setSavedSearches(next);
+    setNewSearchMatches(countNewSavedSearchMatches(next, batches));
+  }, [currentUser.id, batches]);
+
+  const openBatchDetail = (batch: ProductBatch) => {
+    trackBatchView(batch.id);
+    setSelectedBatchForDetail(batch);
+  };
+
+  const handleSaveCurrentSearch = () => {
+    const categoryLabel = categoryPills.find((item) => item.id === cropCategory)?.label || 'Todos';
+    const next = saveSearch(
+      currentUser.id,
+      {
+        name: searchTerm.trim() || `${categoryLabel} · ${selectedCorregimiento === 'ALL' ? 'Barú' : selectedCorregimiento}`,
+        searchTerm,
+        corregimiento: selectedCorregimiento,
+        cropCategory,
+        sortBy,
+      },
+      batches,
+    );
+    setSavedSearches(next);
+    setNewSearchMatches(0);
+  };
+
+  const handleApplySavedSearch = (search: SavedSearch) => {
+    setSearchTerm(search.searchTerm);
+    setSelectedCorregimiento(search.corregimiento);
+    setCropCategory(search.cropCategory as CropCategory);
+    setSortBy(search.sortBy as SortOption);
+    const next = markSavedSearchSeen(currentUser.id, search.id, batches);
+    setSavedSearches(next);
+    setNewSearchMatches(countNewSavedSearchMatches(next, batches));
+  };
+
+  const handleRemoveSavedSearch = (id: string) => {
+    const next = removeSavedSearch(currentUser.id, id);
+    setSavedSearches(next);
+    setNewSearchMatches(countNewSavedSearchMatches(next, batches));
   };
 
   const filteredBatches = useMemo(() => {
@@ -301,7 +360,70 @@ export const ProductCatalog: React.FC<{
             );
           })}
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-800/80 pt-2">
+          <button
+            type="button"
+            onClick={handleSaveCurrentSearch}
+            className="flex items-center gap-1 rounded-lg border border-[#10B981]/40 px-2.5 py-1.5 text-[10px] font-bold text-[#10B981] hover:bg-[#10B981]/10"
+          >
+            <BookmarkPlus className="w-3 h-3" /> Guardar búsqueda
+          </button>
+          {savedSearches.map((search) => (
+            <span
+              key={search.id}
+              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-[#1E293B] bg-[#0B100D] py-1 pl-2.5 pr-1 text-[10px] text-[#CCCCCC]"
+            >
+              <button
+                type="button"
+                onClick={() => handleApplySavedSearch(search)}
+                className="max-w-[150px] truncate hover:text-[#10B981]"
+                title={search.name}
+              >
+                <Bookmark className="mr-1 inline w-2.5 h-2.5" />
+                {search.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveSavedSearch(search.id)}
+                className="rounded p-0.5 text-[#666666] hover:text-[#F97316]"
+                aria-label={`Quitar ${search.name}`}
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
       </div>
+
+      {newSearchMatches > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#10B981]/40 bg-[#0E1A13] px-3 py-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] text-[#ECFDF5] font-sans">
+            <Sparkles className="w-3.5 h-3.5 text-[#FACC15]" />
+            {newSearchMatches} {newSearchMatches === 1 ? 'lote nuevo coincide' : 'lotes nuevos coinciden'} con tus búsquedas guardadas.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const next = savedSearches.map((search) => ({
+                ...search,
+                seenBatchIds: batches.map((batch) => batch.id),
+              }));
+              setSavedSearches(next);
+              try {
+                localStorage.setItem(
+                  `agrobaru_saved_searches_${currentUser.id || 'guest'}`,
+                  JSON.stringify(next),
+                );
+              } catch {}
+              setNewSearchMatches(0);
+            }}
+            className="text-[10px] font-bold text-[#10B981] hover:text-[#FACC15]"
+          >
+            Marcar como visto
+          </button>
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredBatches.length === 0 && (
@@ -479,7 +601,7 @@ export const ProductCatalog: React.FC<{
 
                   <button
                     type="button"
-                    onClick={() => setSelectedBatchForDetail(batch)}
+                    onClick={() => openBatchDetail(batch)}
                     className="w-20 h-20 rounded-lg shrink-0 border border-slate-800 overflow-hidden bg-[#0B100D] group"
                     title="Ver fotos del producto"
                   >
@@ -594,7 +716,7 @@ export const ProductCatalog: React.FC<{
                 {/* Quick Photos Trigger & Reviews */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <button
-                    onClick={() => setSelectedBatchForDetail(batch)}
+                    onClick={() => openBatchDetail(batch)}
                     className="flex items-center gap-1.5 text-xs font-medium text-amber-300 hover:text-amber-200 bg-[#0B100D] hover:bg-[#161E19] border border-amber-500/30 rounded-lg px-3 py-1.5 transition-colors"
                   >
                     <Camera className="w-3.5 h-3.5" />

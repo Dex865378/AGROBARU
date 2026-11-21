@@ -12,6 +12,8 @@ import {
   Radio, 
   Check, 
   ExternalLink,
+  MessageSquare,
+  ChevronRight,
   ShieldAlert
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -24,12 +26,16 @@ interface NotificationCenterModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNavigate?: (route: string) => void;
+  chatUnreadCount?: number;
+  onOpenChat?: () => void;
 }
 
 export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = ({
   open,
   onOpenChange,
   onNavigate,
+  chatUnreadCount = 0,
+  onOpenChat,
 }) => {
   const { success, info, warning } = useNotification();
   const [notifications, setNotifications] = useState<PushNotificationPayload[]>([]);
@@ -176,6 +182,23 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             </div>
           </div>
         </div>
+
+        {chatUnreadCount > 0 && onOpenChat && (
+          <button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              onOpenChat();
+            }}
+            className="flex w-full items-center justify-between gap-2 border border-[#10B981]/50 bg-[#10B981]/10 px-3 py-2.5 text-left hover:bg-[#10B981]/15"
+          >
+            <span className="flex items-center gap-2 text-[11px] font-bold text-[#ECFDF5]">
+              <MessageSquare className="w-4 h-4 text-[#10B981]" />
+              {chatUnreadCount} {chatUnreadCount === 1 ? 'conversación con mensajes nuevos' : 'conversaciones con mensajes nuevos'}
+            </span>
+            <ChevronRight className="w-4 h-4 text-[#10B981]" />
+          </button>
+        )}
 
         {/* Status Card */}
         <div className="bg-[#141414] border border-[#1E293B] p-3 space-y-2">

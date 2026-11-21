@@ -13,6 +13,7 @@ import {
   MapPin,
   Pencil,
   Save,
+  Settings2,
   ShieldCheck,
   ShoppingBasket,
   Sprout,
@@ -23,6 +24,7 @@ import { RoleNavbar } from '@/components/layout/RoleNavbar';
 import { useAuth } from '@/context/AuthContext';
 import { translateAuthError } from '@/lib/authErrors';
 import { ProfileBanner } from '@/components/profile/ProfileBanner';
+import { UserSettingsPanel } from '@/components/profile/UserSettingsPanel';
 import { copyToClipboard } from '@/lib/utils';
 import { optimizeAvatar, optimizeBanner } from '@/lib/imageOptimizer';
 import { BARU_COMMUNITIES, type BaruCommunity, type UserRole } from '@/types/agrobaru';
@@ -331,14 +333,29 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {!editMode && (
-              <button
-                type="button"
-                onClick={() => setEditMode(true)}
-                className="self-start inline-flex items-center gap-1.5 rounded-lg border border-[#1E293B] text-[#CCCCCC] hover:text-[#E5E5E5] hover:bg-[#141414] text-[11px] font-bold px-3 py-2"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Editar
-              </button>
+              <div className="flex flex-wrap items-center gap-2 self-start">
+                <button
+                  type="button"
+                  onClick={() => setEditMode(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#1E293B] text-[#CCCCCC] hover:text-[#E5E5E5] hover:bg-[#141414] text-[11px] font-bold px-3 py-2"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById('configuracion')?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#10B981]/40 bg-[#10B981]/5 text-[#A7F3D0] hover:bg-[#10B981]/10 text-[11px] font-bold px-3 py-2"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Ajustes
+                </button>
+              </div>
             )}
           </div>
 
@@ -465,6 +482,22 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
           )}
+        </section>
+
+        {/* Configuración de la cuenta */}
+        <section id="configuracion" className="rounded-2xl border border-[#1E2E26] bg-[#111714] p-4 sm:p-5">
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-[#10B981]" />
+            <h2 className="font-display font-black text-lg text-[#ECFDF5]">
+              Configuración
+            </h2>
+          </div>
+          <p className="mt-1 text-xs text-[#9E9E9E]">
+            Personaliza notificaciones, privacidad, idioma, tema y accesibilidad.
+          </p>
+          <div className="mt-4">
+            <UserSettingsPanel userId={profile?.uid || user?.uid} />
+          </div>
         </section>
 
         {/* Seguridad */}

@@ -8,6 +8,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 
@@ -35,7 +36,10 @@ export interface DirectConversationMeta {
   participants?: string[];
   lastMessage?: string;
   lastMessageAt?: string;
+  lastSenderId?: string;
   lastRead?: Record<string, string>;
+  typing?: Record<string, boolean>;
+  lastSeen?: Record<string, string>;
   updatedAt?: string;
 }
 
@@ -107,6 +111,7 @@ export async function sendDirectChatMessage(input: {
       participants: [...input.participants].sort(),
       lastMessage: input.imageUrl ? 'Foto adjunta' : input.text.slice(0, 160),
       lastMessageAt: createdAt,
+      lastSenderId: input.senderId,
       updatedAt: createdAt,
     },
     { merge: true },
@@ -210,4 +215,90 @@ export function roleDescription(role?: string): string {
   if (role === 'cooperative') return 'Cooperativa / MIDA';
   if (role === 'auditor') return 'Auditor Certificado';
   return 'Miembro de la comunidad';
+}
+
+
+/** Estado “escribiendo…” compartido entre las dos cuentas. */
+export async function setDirectTyping(
+  conversationId: string,
+  uid: string,
+  typing: boolean,
+): Promise<void> {
+  try {
+    await updateDoc(doc(db, DIRECT_CHAT_COLLECTION, conversationId), {
+      [`typing.${uid}`]: typing,
+      [`lastSeen.${uid}`]: new Date().toISOString(),
+    });
+  } catch {
+    // La conversación puede no existir todavía o el usuario estar offline.
+  }
+}
+
+/** Latido de presencia para mostrar actividad sin exponer la ubicación. */
+export async function setDirectPresence(
+  conversationId: string,
+  uid: string,
+  online: boolean,
+): Promise<void> {
+  try {
+    await updateDoc(doc(db, DIRECT_CHAT_COLLECTION, conversationId), {
+      [`lastSeen.${uid}`]: new Date().toISOString(),
+      [`typing.${uid}`]: false,
+    });
+    if (!online) {
+      await updateDoc(doc(db, DIRECT_CHAT_COLLECTION, conversationId), {
+        [`lastSeen.${uid}`]: new Date().toISOString(),
+      });
+    }
+  } catch {
+    // Sin conexión se reintenta al abrir el chat.
+  }
+}
+
+export interface UnreadConversation {
+  id: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  lastSenderId?: string;
+  lastRead?: Record<string, string>;
+}
+
+export function subscribeUnreadDirectChats(
+  uid: string,
+  callback: (conversations: UnreadConversation[]) => void,
+  onError?: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    query(
+      collection(db, DIRECT_CHAT_COLLECTION),
+      where('participants', 'array-contains', uid),
+    ),
+    (snapshot) => {
+      callback(
+        snapshot.docs.map((item) => {
+          const data = item.data() as DirectConversationMeta;
+          return {
+            id: item.id,
+            lastMessage: data.lastMessage,
+            lastMessageAt: data.lastMessageAt,
+            lastSenderId: data.lastSenderId,
+            lastRead: data.lastRead,
+          };
+        }),
+      );
+    },
+    (error) => onError?.(error),
+  );
+}
+
+export function countUnreadDirectChats(
+  conversations: UnreadConversation[],
+  uid: string,
+): number {
+  return conversations.filter((conversation) => {
+    if (!conversation.lastSenderId || conversation.lastSenderId === uid) return false;
+    if (!conversation.lastMessageAt) return false;
+    const readAt = conversation.lastRead?.[uid];
+    return !readAt || readAt < conversation.lastMessageAt;
+  }).length;
 }

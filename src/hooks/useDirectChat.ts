@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState } from '@/context/AppStateContext';
 import {
   DirectChatRecord,
@@ -8,9 +8,12 @@ import {
   isFirebaseUid,
   markDirectConversationRead,
   sendDirectChatMessage,
+  setDirectPresence,
+  setDirectTyping,
   subscribeDirectConversation,
   subscribeDirectMessages,
 } from '@/services/chatService';
+import { loadLocalPreferences } from '@/services/preferencesService';
 import type { ChatContact } from '@/components/chat/DirectMessageModal';
 
 export interface ChatMessage {
@@ -29,7 +32,9 @@ interface UseDirectChatResult {
   loading: boolean;
   error: string | null;
   isRemote: boolean;
+  otherTyping: boolean;
   sendMessage: (text: string, imageUrl?: string) => Promise<boolean>;
+  notifyTyping: (value: string) => void;
 }
 
 function formatTime(iso?: string): string {
@@ -78,6 +83,7 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
   const [meta, setMeta] = useState<DirectConversationMeta>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const typingTimerRef = useRef<number | null>(null);
 
   // Conversaciones de ejemplo: se mantienen en el dispositivo y nunca simulan
   // respuestas de otra persona.
@@ -193,13 +199,60 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
 
   const lastMessageId = rawMessages[rawMessages.length - 1]?.id;
   const lastMessageSender = rawMessages[rawMessages.length - 1]?.senderId;
+  const readReceiptsEnabled = loadLocalPreferences(myId)?.readReceipts !== false;
+
   useEffect(() => {
     if (!isRemote || !conversationId || !lastMessageId || lastMessageSender === myId) return;
+    if (!readReceiptsEnabled) return;
     const alreadyRead = meta.lastRead?.[myId];
     const lastMessage = rawMessages[rawMessages.length - 1];
     if (alreadyRead && lastMessage && alreadyRead >= lastMessage.createdAt) return;
     void markDirectConversationRead(conversationId, myId);
-  }, [conversationId, isRemote, lastMessageId, lastMessageSender, meta.lastRead, myId, rawMessages]);
+  }, [conversationId, isRemote, lastMessageId, lastMessageSender, meta.lastRead, myId, rawMessages, readReceiptsEnabled]);
+
+  // Presencia: un latido cada 25 s mientras la conversación está abierta.
+  useEffect(() => {
+    if (!isRemote || !conversationId) return;
+    void setDirectPresence(conversationId, myId, true);
+    const interval = window.setInterval(() => {
+      void setDirectPresence(conversationId, myId, true);
+    }, 25000);
+    return () => {
+      window.clearInterval(interval);
+      void setDirectPresence(conversationId, myId, false);
+    };
+  }, [conversationId, isRemote, myId]);
+
+  const notifyTyping = useCallback(
+    (value: string) => {
+      if (!isRemote || !conversationId) return;
+      if (typingTimerRef.current) {
+        window.clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+      void setDirectTyping(conversationId, myId, value.trim().length > 0);
+      if (value.trim().length > 0) {
+        typingTimerRef.current = window.setTimeout(() => {
+          void setDirectTyping(conversationId, myId, false);
+          typingTimerRef.current = null;
+        }, 1600);
+      }
+    },
+    [conversationId, isRemote, myId],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) {
+        window.clearTimeout(typingTimerRef.current);
+      }
+      if (isRemote && conversationId) {
+        void setDirectTyping(conversationId, myId, false);
+      }
+    };
+  }, [conversationId, isRemote, myId]);
+
+  const otherTyping = Boolean(contact && isRemote && meta.typing?.[contact.id]);
 
   const sendMessage = useCallback(
     async (text: string, imageUrl?: string): Promise<boolean> => {
@@ -251,7 +304,7 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
     [contact, conversationId, currentUser.name, currentUser.photoURL, isRemote, localKey, myId],
   );
 
-  return { messages, loading, error, isRemote, sendMessage };
+  return { messages, loading, error, isRemote, otherTyping, sendMessage, notifyTyping };
 }
 
 /** Evita recrear el array de mensajes en cada render cuando no cambió. */

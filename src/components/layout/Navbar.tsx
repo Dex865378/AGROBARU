@@ -16,7 +16,8 @@ import {
   Calculator,
   Languages,
   Users,
-  Bell
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 import { useAppState } from '@/context/AppStateContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -34,6 +35,8 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   onNavigateToChat?: (contact: ChatContact) => void;
   onOpenNotifications?: () => void;
+  onOpenChatInbox?: () => void;
+  chatUnreadCount?: number;
   unreadCount?: number;
   cartCount?: number;
   onOpenCart?: () => void;
@@ -45,6 +48,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   onNavigateToChat,
   onOpenNotifications,
+  onOpenChatInbox,
+  chatUnreadCount = 0,
   unreadCount = 0,
   cartCount = 0,
   onOpenCart,
@@ -122,6 +127,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               {cartCount > 0 && (
                 <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#10B981] text-[#05100A] text-[10px] font-black flex items-center justify-center">
                   {cartCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Chat inbox unread badge */}
+          {onOpenChatInbox && (
+            <button
+              onClick={onOpenChatInbox}
+              className="relative p-1.5 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#1E2E26] hover:border-[#10B981]/50 text-[#E5E5E5] transition-all"
+              title="Abrir mensajes"
+              aria-label="Abrir mensajes"
+            >
+              <MessageSquare className="w-4 h-4 text-[#10B981]" />
+              {chatUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#10B981] text-black text-[9px] font-black flex items-center justify-center">
+                  {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
                 </span>
               )}
             </button>

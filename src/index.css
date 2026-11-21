@@ -46,6 +46,149 @@
   }
 }
 
+/* Temas de ambiente: conservan la paleta oscura y los acentos originales. */
+html {
+  --theme-header: rgba(9, 13, 11, 0.95);
+  --theme-footer: rgba(9, 13, 11, 0.92);
+}
+
+html[data-theme="esmeralda"] body {
+  background-color: #090D0B;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(22, 163, 74, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.04) 0%, transparent 45%);
+}
+
+html[data-theme="bosque"] {
+  --theme-header: rgba(4, 11, 7, 0.96);
+  --theme-footer: rgba(4, 11, 7, 0.94);
+}
+html[data-theme="bosque"] body {
+  background-color: #050B08;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.13) 0%, transparent 58%),
+    radial-gradient(circle at 0% 100%, rgba(20, 83, 45, 0.22) 0%, transparent 55%),
+    linear-gradient(145deg, #050B08 0%, #08130C 55%, #050B08 100%);
+}
+
+html[data-theme="cacao"] {
+  --theme-header: rgba(13, 9, 6, 0.96);
+  --theme-footer: rgba(13, 9, 6, 0.94);
+}
+html[data-theme="cacao"] body {
+  background-color: #0D0906;
+  background-image:
+    radial-gradient(circle at 55% 0%, rgba(245, 158, 11, 0.12) 0%, transparent 56%),
+    radial-gradient(circle at 100% 100%, rgba(120, 53, 15, 0.28) 0%, transparent 52%),
+    linear-gradient(145deg, #0D0906 0%, #140D08 55%, #0D0906 100%);
+}
+
+html[data-theme="pacifico"] {
+  --theme-header: rgba(5, 11, 16, 0.96);
+  --theme-footer: rgba(5, 11, 16, 0.94);
+}
+html[data-theme="pacifico"] body {
+  background-color: #050B10;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.10) 0%, transparent 58%),
+    radial-gradient(circle at 100% 100%, rgba(12, 74, 110, 0.30) 0%, transparent 55%),
+    linear-gradient(145deg, #050B10 0%, #07131B 55%, #050B10 100%);
+}
+
+html[data-theme="atardecer"] {
+  --theme-header: rgba(12, 8, 13, 0.96);
+  --theme-footer: rgba(12, 8, 13, 0.94);
+}
+html[data-theme="atardecer"] body {
+  background-color: #0C080D;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(250, 204, 21, 0.08) 0%, transparent 52%),
+    radial-gradient(circle at 100% 100%, rgba(109, 40, 217, 0.26) 0%, transparent 55%),
+    linear-gradient(145deg, #0C080D 0%, #120B16 55%, #0C080D 100%);
+}
+
+#root header {
+  background-color: var(--theme-header) !important;
+}
+
+/* Ambientes de tema: tiñen superficies neutras sin tocar acentos de marca. */
+html[data-theme="bosque"] {
+  --theme-bg: #050B08;
+  --theme-surface: #0A1510;
+  --theme-surface-2: #0E1C15;
+  --theme-border: #1C3328;
+}
+html[data-theme="cacao"] {
+  --theme-bg: #0D0906;
+  --theme-surface: #171009;
+  --theme-surface-2: #1F140B;
+  --theme-border: #3A2A1B;
+}
+html[data-theme="pacifico"] {
+  --theme-bg: #050B10;
+  --theme-surface: #0A141C;
+  --theme-surface-2: #0E1B25;
+  --theme-border: #1B3244;
+}
+html[data-theme="atardecer"] {
+  --theme-bg: #0C080D;
+  --theme-surface: #150F17;
+  --theme-surface-2: #1B1220;
+  --theme-border: #362441;
+}
+
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#090D0B]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#0A0A0A]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#0A0F0C]"] {
+  background-color: var(--theme-bg) !important;
+}
+
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#0E0E0E]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#0B100D]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#111714]"] {
+  background-color: var(--theme-surface) !important;
+}
+
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#121212]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#141414]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#131A16]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#141B17]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#161E19]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#161616]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#181818]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="bg-[#1A1A1A]"] {
+  background-color: var(--theme-surface-2) !important;
+}
+
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="border-[#1E293B]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="border-[#1E2E26]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="border-[#262626]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="border-[#1A1A1A]"],
+html:not([data-theme="esmeralda"]):not([data-theme=""]) [class~="border-[#383838]"] {
+  border-color: var(--theme-border) !important;
+}
+
+/* Modo compacto y movimiento reducido desde Configuración. */
+html[data-compact="true"] main .py-6 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+html[data-compact="true"] main .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.85rem !important;
+}
+html[data-compact="true"] main .gap-5 {
+  gap: 0.85rem !important;
+}
+
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* Accesibilidad: foco visible consistente para teclado */
 :focus-visible {
   outline: 2px solid #10B981;
