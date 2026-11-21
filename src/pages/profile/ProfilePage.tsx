@@ -485,7 +485,7 @@ export const ProfilePage: React.FC = () => {
         </section>
 
         {/* Configuración de la cuenta */}
-        <section id="configuracion" className="rounded-2xl border border-[#1E2E26] bg-[#111714] p-4 sm:p-5">
+        <section id="configuracion" className="scroll-mt-20 rounded-2xl border border-[#1E2E26] bg-[#111714] p-4 sm:p-5">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-[#10B981]" />
             <h2 className="font-display font-black text-lg text-[#ECFDF5]">
