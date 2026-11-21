@@ -336,6 +336,7 @@ const SPANISH_TO_ENGLISH: Array<[string, string]> = [
   ['Ubicación', 'Location'],
   ['Sesión protegida por Firebase Auth', 'Session protected by Firebase Auth'],
   ['Datos con caché offline en tu dispositivo', 'Data cached offline on your device'],
+  ['Administra tu cuenta, tu comunidad y el modo de trabajo activo en AgroBarú.', 'Manage your account, community and active work mode in AgroBarú.'],
 ];
 
 const PHRASES = new Map(
