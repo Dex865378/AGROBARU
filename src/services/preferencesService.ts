@@ -34,6 +34,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'esmeralda',
 };
 
+const VALID_THEMES: ThemeId[] = ['esmeralda', 'bosque', 'cacao', 'pacifico', 'atardecer'];
+
 const storageKey = (userId?: string) => `agrobaru_preferences_${userId || 'guest'}`;
 
 function normalizePreferences(value: Partial<UserPreferences> | null | undefined): UserPreferences {
@@ -41,7 +43,7 @@ function normalizePreferences(value: Partial<UserPreferences> | null | undefined
     ...DEFAULT_PREFERENCES,
     ...(value || {}),
     language: value?.language === 'en' ? 'en' : 'es',
-    theme: value?.theme || DEFAULT_PREFERENCES.theme,
+    theme: value?.theme && VALID_THEMES.includes(value.theme) ? value.theme : DEFAULT_PREFERENCES.theme,
   };
 }
 

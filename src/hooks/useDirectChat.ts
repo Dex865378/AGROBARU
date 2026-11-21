@@ -200,6 +200,7 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
   const lastMessageId = rawMessages[rawMessages.length - 1]?.id;
   const lastMessageSender = rawMessages[rawMessages.length - 1]?.senderId;
   const readReceiptsEnabled = loadLocalPreferences(myId)?.readReceipts !== false;
+  const onlineStatusEnabled = loadLocalPreferences(myId)?.showOnlineStatus !== false;
 
   useEffect(() => {
     if (!isRemote || !conversationId || !lastMessageId || lastMessageSender === myId) return;
@@ -212,7 +213,7 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
 
   // Presencia: un latido cada 25 s mientras la conversación está abierta.
   useEffect(() => {
-    if (!isRemote || !conversationId) return;
+    if (!isRemote || !conversationId || !onlineStatusEnabled) return;
     void setDirectPresence(conversationId, myId, true);
     const interval = window.setInterval(() => {
       void setDirectPresence(conversationId, myId, true);
@@ -221,11 +222,11 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
       window.clearInterval(interval);
       void setDirectPresence(conversationId, myId, false);
     };
-  }, [conversationId, isRemote, myId]);
+  }, [conversationId, isRemote, myId, onlineStatusEnabled]);
 
   const notifyTyping = useCallback(
     (value: string) => {
-      if (!isRemote || !conversationId) return;
+      if (!isRemote || !conversationId || !onlineStatusEnabled) return;
       if (typingTimerRef.current) {
         window.clearTimeout(typingTimerRef.current);
         typingTimerRef.current = null;
@@ -238,7 +239,7 @@ export function useDirectChat(contact: ChatContact | null, active = true): UseDi
         }, 1600);
       }
     },
-    [conversationId, isRemote, myId],
+    [conversationId, isRemote, myId, onlineStatusEnabled],
   );
 
   useEffect(() => {
