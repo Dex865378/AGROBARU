@@ -200,14 +200,14 @@ export function sortReviews(reviews: StoredReview[]): StoredReview[] {
 
 /**
  * Devuelve la orden que autoriza a este comprador a reseñar.
- * Se acepta una entrega pendiente de inspección o una orden ya liberada.
+ * Solo cuenta una compra cerrada: los fondos Escrow ya fueron liberados.
  */
 export function findVerifiedOrder(
   orders: EscrowOrder[],
   buyerId: string,
   filters: { batchId?: string; producerId?: string; producerName?: string },
 ): EscrowOrder | undefined {
-  const validStatuses: EscrowOrder['escrowStatus'][] = ['DELIVERED_PENDING_INSPECTION', 'RELEASED'];
+  const validStatuses: EscrowOrder['escrowStatus'][] = ['RELEASED'];
   const normalizedProducer = normalizeName(filters.producerName);
   return orders.find((order) => {
     if (order.buyerId !== buyerId) return false;
