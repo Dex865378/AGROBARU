@@ -27,17 +27,8 @@ import { SafeImage } from '@/components/ui/SafeImage';
 import { createInitialsAvatarDataUri } from '@/lib/imageFallbacks';
 import { PublicProfileModal } from '@/components/profile/PublicProfileModal';
 import { optimizeChatImage } from '@/lib/imageOptimizer';
-
-interface ChatMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  timestamp: string;
-  isSelf: boolean;
-  imageUrl?: string;
-  status: 'sent' | 'delivered' | 'read';
-}
+import { useDirectChat } from '@/hooks/useDirectChat';
+import { roleDescription, subscribeRealDirectory, DirectoryContact } from '@/services/chatService';
 
 interface DirectChatPageProps {
   contact: ChatContact | null;
@@ -50,50 +41,100 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
   onBack,
   onSelectContact
 }) => {
-  const { currentUser } = useAppState();
+  const { currentUser, firebaseUser } = useAppState();
   const { language } = useLanguage();
-  const { success } = useNotification();
+  const myUid = firebaseUser?.uid || currentUser.id;
 
-  // Active contact fallback
+  // Active contact fallback (solo se usa si aún no hay cuentas reales).
   const defaultContact: ChatContact = {
     id: 'USR-FARMER-01',
     name: 'Don Dionisio Castillo',
     corregimiento: 'Puerto Armuelles',
     avatar: createInitialsAvatarDataUri('Don Dionisio Castillo'),
     reputation: 99.4,
-    phone: '+507 6789-1234'
+    phone: '+507 6789-1234',
+    isReal: false,
   };
 
   const activeContact = contact || defaultContact;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [searchContactFilter, setSearchContactFilter] = useState('');
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [realContacts, setRealContacts] = useState<ChatContact[]>([]);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const autoSelectedContactRef = useRef(false);
 
-  // All available contacts for the sidebar
+  const { messages, loading: chatLoading, error: chatError, isRemote, sendMessage } = useDirectChat(
+    activeContact,
+    true,
+  );
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    return subscribeRealDirectory(
+      (contacts: DirectoryContact[]) => {
+        setRealContacts(
+          contacts
+            .filter((item) => item.id !== myUid)
+            .map((item) => ({
+            id: item.id,
+            name: item.name,
+            roleDescription: roleDescription(item.role),
+            corregimiento: item.location || 'Barú, Chiriquí',
+            avatar: item.avatar,
+            phone: item.phone,
+            reputation: item.reputation,
+            badge: item.badge || roleDescription(item.role),
+            isReal: true,
+            })),
+        );
+        setDirectoryLoading(false);
+        setDirectoryError(null);
+      },
+      () => {
+        setDirectoryLoading(false);
+        setDirectoryError('No se pudo cargar el directorio de cuentas.');
+      },
+    );
+  }, [myUid]);
+
+  // Si hay cuentas reales, abre la primera conversación real al entrar al chat.
+  useEffect(() => {
+    if (contact || autoSelectedContactRef.current || realContacts.length === 0) return;
+    autoSelectedContactRef.current = true;
+    onSelectContact?.(realContacts[0]);
+  }, [contact, onSelectContact, realContacts]);
+
+  // Contactos reales primero; después el directorio demostrativo.
   const allContacts: ChatContact[] = [
+    ...realContacts,
     ...FARMER_DIRECTORY.map(f => ({
       id: f.id,
       name: f.name,
+      roleDescription: 'Productor Titular',
       corregimiento: f.corregimiento,
       avatar: f.avatar,
       reputation: f.reputation,
       phone: f.phone,
-      badge: 'Productor Titular'
+      badge: 'Productor Titular',
+      isReal: false,
     })),
     ...ENTERPRISE_DIRECTORY.map(e => ({
       id: e.id,
       name: e.brandName,
+      roleDescription: e.category,
       corregimiento: e.corregimiento,
       avatar: e.avatar,
       reputation: Math.round(e.rating * 20 * 10) / 10,
       phone: e.phone,
-      badge: e.category
+      badge: e.category,
+      isReal: false,
     }))
   ];
 
@@ -101,26 +142,6 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
     c.name.toLowerCase().includes(searchContactFilter.toLowerCase()) ||
     (c.corregimiento && c.corregimiento.toLowerCase().includes(searchContactFilter.toLowerCase()))
   );
-
-  // Load chat history for active contact
-  useEffect(() => {
-    const storedKey = `agrobaru_chat_${activeContact.id}`;
-    const saved = localStorage.getItem(storedKey);
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    } else {
-      const welcome: ChatMessage = {
-        id: `INIT-${Date.now()}`,
-        senderId: activeContact.id,
-        senderName: activeContact.name,
-        text: `¡Hola! Soy ${activeContact.name} desde ${activeContact.corregimiento || 'Barú, Chiriquí'}. ¿En qué podemos apoyarle con las órdenes de cosecha, muestras de fruta o contratos Escrow?`,
-        timestamp: '10:00 AM',
-        isSelf: false,
-        status: 'read'
-      };
-      setMessages([welcome]);
-    }
-  }, [activeContact.id]);
 
   useEffect(() => {
     // Desplaza solo el contenedor de mensajes, nunca la página completa.
@@ -130,46 +151,17 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
     }
   }, [messages]);
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim() && !attachedImage) return;
+    if ((!inputText.trim() && !attachedImage) || isSending) return;
 
-    const newMsg: ChatMessage = {
-      id: `MSG-${Date.now()}`,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      text: inputText.trim(),
-      imageUrl: attachedImage || undefined,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isSelf: true,
-      status: 'sent'
-    };
-
-    const updated = [...messages, newMsg];
-    setMessages(updated);
-    setInputText('');
-    setAttachedImage(null);
-
-    const storedKey = `agrobaru_chat_${activeContact.id}`;
-    localStorage.setItem(storedKey, JSON.stringify(updated));
-
-    // Simulated quick reply from producer
-    setTimeout(() => {
-      const reply: ChatMessage = {
-        id: `REPLY-${Date.now()}`,
-        senderId: activeContact.id,
-        senderName: activeContact.name,
-        text: `Comprendido perfectamente. Tenemos la documentación fitosanitaria MIDA al día y el lote listo para inspección. ¿Le gustaría proceder con un pedido de muestra courier o coordinar depósito en custodia?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isSelf: false,
-        status: 'read'
-      };
-      setMessages(prev => {
-        const full = [...prev, reply];
-        localStorage.setItem(storedKey, JSON.stringify(full));
-        return full;
-      });
-    }, 450);
+    setIsSending(true);
+    const sent = await sendMessage(inputText, attachedImage || undefined);
+    if (sent) {
+      setInputText('');
+      setAttachedImage(null);
+    }
+    setIsSending(false);
   };
 
   const handleAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,13 +216,33 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
 
           {/* Contacts List */}
           <div className="flex-1 overflow-y-auto divide-y divide-[#1E293B] max-h-[220px] lg:max-h-[620px]">
+            {directoryLoading && (
+              <div className="p-3 space-y-2 animate-pulse" aria-label="Cargando directorio">
+                <div className="h-9 bg-[#141414] border border-[#1E293B]" />
+                <div className="h-9 bg-[#141414] border border-[#1E293B]" />
+              </div>
+            )}
+            {directoryError && (
+              <div className="p-3 text-[10px] text-[#FED7AA] border-b border-[#F97316]/40 bg-[#F97316]/10 font-sans" role="alert">
+                {directoryError}
+              </div>
+            )}
             {filteredContacts.map((c) => {
               const isSelected = c.id === activeContact.id;
               return (
                 <div
                   key={c.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-current={isSelected ? 'true' : undefined}
                   onClick={() => onSelectContact?.(c)}
-                  className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onSelectContact?.(c);
+                    }
+                  }}
+                  className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition-colors focus-visible:bg-[#141414] ${
                     isSelected 
                       ? 'bg-[#15803D]/15 border-l-4 border-[#15803D]' 
                       : 'hover:bg-[#141414]'
@@ -252,6 +264,9 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                         <MapPin className="w-2.5 h-2.5 text-[#15803D]" />
                         <span>{c.corregimiento}</span>
                       </div>
+                      <div className={`text-[8px] font-bold uppercase mt-0.5 ${c.isReal ? 'text-[#10B981]' : 'text-[#666666]'}`}>
+                        {c.isReal ? 'Cuenta real' : 'Perfil de ejemplo'}
+                      </div>
                     </div>
                   </div>
 
@@ -260,7 +275,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                       <ShieldCheck className="w-2.5 h-2.5 text-[#FACC15]" />
                       {Number(c.reputation || 99).toFixed(1)}%
                     </span>
-                    <span className="text-[8px] text-[#666666]">En línea</span>
+                    <span className="text-[8px] text-[#666666]">{c.isReal ? 'En línea' : 'Ejemplo'}</span>
                   </div>
                 </div>
               );
@@ -285,7 +300,9 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                   <h3 className="font-display font-black text-sm text-[#E5E5E5] truncate">
                     {activeContact.name}
                   </h3>
-                  <Badge variant="live-green" className="text-[8px] py-0 shrink-0">Activo</Badge>
+                  <Badge variant={isRemote ? 'live-green' : 'outline'} className="text-[8px] py-0 shrink-0">
+                    {isRemote ? 'En vivo' : 'Ejemplo'}
+                  </Badge>
                 </div>
                 <p className="text-[10px] text-[#9E9E9E] truncate">
                   {activeContact.corregimiento} • Reputación MIDA: <strong className="text-[#FACC15]">{Number(activeContact.reputation || 99.4).toFixed(1)}%</strong>
@@ -317,7 +334,32 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
               </span>
             </div>
 
-            {messages.map((msg) => (
+            {chatLoading && (
+              <div className="space-y-2 animate-pulse py-3" aria-label="Cargando mensajes">
+                <div className="h-12 w-2/3 border border-[#1E293B] bg-[#141414]" />
+                <div className="h-12 w-1/2 border border-[#1E293B] bg-[#141414] ml-auto" />
+              </div>
+            )}
+
+            {chatError && (
+              <div className="border border-[#F97316]/50 bg-[#F97316]/10 p-3 text-[10px] text-[#FED7AA] font-sans" role="alert">
+                {chatError}
+              </div>
+            )}
+
+            {!chatLoading && !chatError && messages.length === 0 && (
+              <div className="my-6 border border-dashed border-[#1E293B] bg-[#0E0E0E] p-6 text-center">
+                <MessageSquare className="w-8 h-8 mx-auto text-[#15803D] mb-2" />
+                <p className="font-bold text-[#E5E5E5]">Inicia la conversación</p>
+                <p className="text-[10px] text-[#9E9E9E] mt-1 font-sans">
+                  {isRemote
+                    ? 'Los mensajes se guardan en la nube y la otra cuenta los verá al entrar.'
+                    : 'Este es un perfil de ejemplo. Elige una cuenta real del directorio para conversar entre usuarios.'}
+                </p>
+              </div>
+            )}
+
+            {!chatLoading && messages.map((msg) => (
               <div 
                 key={msg.id}
                 className={`flex flex-col ${msg.isSelf ? 'items-end' : 'items-start'}`}
@@ -348,7 +390,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
                   <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-[#666666]">
                     <span>{msg.timestamp}</span>
                     {msg.isSelf && (
-                      <CheckCheck className="w-3 h-3 text-[#15803D]" />
+                      <CheckCheck className={`w-3 h-3 ${msg.status === 'read' ? 'text-[#10B981]' : 'text-[#666666]'}`} />
                     )}
                   </div>
                 </div>
@@ -399,7 +441,7 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="p-2 border border-[#1E293B] bg-[#141414] text-[#666666] hover:text-[#FACC15] shrink-0"
-              title="Adjuntar imagen"
+              title="Adjuntar imagen" aria-label="Adjuntar imagen"
             >
               <ImageIcon className="w-4 h-4" />
             </button>
@@ -423,9 +465,11 @@ export const DirectChatPage: React.FC<DirectChatPageProps> = ({
               variant="default"
               size="sm"
               className="px-5 font-bold flex items-center gap-1.5 shrink-0"
+              disabled={isSending || (!inputText.trim() && !attachedImage)}
+              aria-label="Enviar mensaje"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>Enviar</span>
+              <span>{isSending ? 'Enviando…' : 'Enviar'}</span>
             </Button>
           </form>
         </div>

@@ -252,7 +252,11 @@ export const AdminPage: React.FC = () => {
               <span>Rol</span>
               <span>Origen</span>
             </div>
-            {users.map((row) => (
+            {users.length === 0 ? (
+              <p className="px-3 py-8 text-center text-xs text-[#9E9E9E]">
+                Todavía no hay cuentas registradas.
+              </p>
+            ) : users.map((row) => (
               <div
                 key={`${row.source}:${row.id}`}
                 className="grid grid-cols-[1.2fr_1.5fr_0.8fr_0.7fr] items-center gap-2 border-b border-[#1E2E26]/60 px-3 py-2 text-[11px] last:border-0"

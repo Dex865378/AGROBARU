@@ -61,9 +61,21 @@ export function generateReceiptHtml(orders: EscrowOrder[]): string {
 <head>
   <meta charset="UTF-8" />
   <title>Comprobante Escrow ${primary.cartGroupId || primary.orderCode} - AgroBarú</title>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { padding: 0 !important; background: #ffffff !important; }
+      .receipt-sheet { box-shadow: none !important; border: 0 !important; }
+    }
+  </style>
 </head>
 <body style="font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:32px;">
-  <div style="max-width:760px;margin:0 auto;background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.06);">
+  <div class="no-print" style="max-width:760px;margin:0 auto 12px;text-align:right;">
+    <button onclick="window.print()" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;">
+      Imprimir / Guardar como PDF
+    </button>
+  </div>
+  <div class="receipt-sheet" style="max-width:760px;margin:0 auto;background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.06);">
     <div style="background:#0b130e;color:#f8fafc;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #16a34a;">
       <div>
         <div style="font-size:20px;font-weight:800;letter-spacing:0.04em;">AGRO<span style="color:#22c55e;">BARÚ</span></div>
@@ -157,4 +169,27 @@ export function downloadOrderReceipt(orders: EscrowOrder[]) {
       win.print();
     }
   }
+}
+
+
+/**
+ * Abre el comprobante en una pestaña lista para imprimir o guardar como PDF.
+ * El diálogo nativo del navegador permite elegir "Guardar como PDF".
+ */
+export function printOrderReceipt(orders: EscrowOrder[]): void {
+  if (!orders.length) return;
+  const html = generateReceiptHtml(orders);
+  const win = window.open('', '_blank', 'noopener,noreferrer');
+  if (!win) return;
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => {
+    try {
+      win.print();
+    } catch {
+      // El usuario aún puede usar el botón de impresión de la página.
+    }
+  }, 350);
 }

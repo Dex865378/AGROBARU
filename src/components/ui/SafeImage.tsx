@@ -19,6 +19,8 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   cropHint,
   nameHint,
   onError,
+  loading = 'lazy',
+  decoding = 'async',
   ...props
 }) => {
   const computeInitialSrc = () => {
@@ -47,6 +49,8 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       {...props}
       src={imgSrc}
       alt={alt}
+      loading={loading}
+      decoding={decoding}
       onError={(e) => {
         const hardFallback = computeHardFallback();
         if (imgSrc !== hardFallback) {

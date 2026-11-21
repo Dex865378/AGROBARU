@@ -23,6 +23,8 @@ export interface OrderReview {
   qualityCompliant: boolean;
   onTimeDelivery: boolean;
   createdAt: string;
+  /** La reseña corresponde a una orden entregada/liberada. */
+  verified?: boolean;
 }
 
 export interface UserProfile {

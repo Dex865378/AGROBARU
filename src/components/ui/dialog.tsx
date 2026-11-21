@@ -21,7 +21,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
         />
         
         {/* Modal Box with Safe Viewport Dimensions */}
-        <div className="relative z-50 w-full max-w-lg bg-[#111714] rounded-xl border border-emerald-500/25 p-5 sm:p-6 text-left shadow-2xl shadow-black/70 my-6 max-h-[88vh] overflow-y-auto flex flex-col">
+        <div role="dialog" aria-modal="true" className="relative z-50 w-full max-w-lg bg-[#111714] rounded-xl border border-emerald-500/25 p-5 sm:p-6 text-left shadow-2xl shadow-black/70 my-6 max-h-[88vh] overflow-y-auto flex flex-col">
           {children}
         </div>
       </div>
@@ -54,6 +54,7 @@ export function DialogCloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       className="absolute right-4 top-4 p-1.5 rounded-lg bg-[#18221D] border border-slate-700/80 text-slate-400 hover:text-white hover:border-emerald-500/50 transition-colors z-10"
       title="Cerrar"
+      aria-label="Cerrar ventana"
     >
       <X className="w-4 h-4" />
     </button>

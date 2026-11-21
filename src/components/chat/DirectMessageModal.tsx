@@ -21,6 +21,7 @@ import { useAppState } from '@/context/AppStateContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNotification } from '@/context/NotificationContext';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { useDirectChat } from '@/hooks/useDirectChat';
 
 export interface ChatContact {
   id: string;
@@ -31,6 +32,8 @@ export interface ChatContact {
   phone?: string;
   reputation?: number;
   badge?: string;
+  /** true cuando el id es un UID real de Firebase Auth. */
+  isReal?: boolean;
 }
 
 interface DirectMessageModalProps {
@@ -40,53 +43,24 @@ interface DirectMessageModalProps {
   initialMessage?: string;
 }
 
-interface ChatMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  timestamp: string;
-  isSelf: boolean;
-  status: 'sent' | 'delivered' | 'read';
-}
-
 export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
   isOpen,
   onClose,
   contact,
   initialMessage
 }) => {
-  const { currentUser } = useAppState();
   const { language } = useLanguage();
-  const { success } = useNotification();
-  
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { messages, loading, error, isRemote, sendMessage } = useDirectChat(
+    isOpen ? contact : null,
+    isOpen,
+  );
   const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize conversation when contact opens
   useEffect(() => {
-    if (contact && isOpen) {
-      const storedKey = `agrobaru_chat_${contact.id}`;
-      const saved = localStorage.getItem(storedKey);
-      if (saved) {
-        setMessages(JSON.parse(saved));
-      } else {
-        const welcomeMessage: ChatMessage = {
-          id: `MSG-${Date.now()}-1`,
-          senderId: contact.id,
-          senderName: contact.name,
-          text: `¡Saludos! Soy ${contact.name} desde ${contact.corregimiento || 'Barú, Chiriquí'}. ¿En qué podemos servirle sobre nuestras cosechas y pedidos de exportación?`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 5).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isSelf: false,
-          status: 'read'
-        };
-        setMessages([welcomeMessage]);
-      }
-
-      if (initialMessage) {
-        setInputText(initialMessage);
-      }
+    if (contact && isOpen && initialMessage) {
+      setInputText(initialMessage);
     }
   }, [contact, isOpen, initialMessage]);
 
@@ -94,44 +68,13 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages]);
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim() || !contact) return;
-
-    const newMsg: ChatMessage = {
-      id: `MSG-${Date.now()}`,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      text: inputText.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isSelf: true,
-      status: 'sent'
-    };
-
-    const updated = [...messages, newMsg];
-    setMessages(updated);
-    setInputText('');
-
-    const storedKey = `agrobaru_chat_${contact.id}`;
-    localStorage.setItem(storedKey, JSON.stringify(updated));
-
-    // Simulate instant automated acknowledgment from producer within 2 seconds
-    setTimeout(() => {
-      const responseMsg: ChatMessage = {
-        id: `MSG-${Date.now()}-reply`,
-        senderId: contact.id,
-        senderName: contact.name,
-        text: `Recibido con gusto. Estamos preparando la inspección y certificados en finca. ¿Desea coordinar muestra courier de 18 kg o cotización en contenedor FOB?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isSelf: false,
-        status: 'read'
-      };
-      setMessages(prev => {
-        const withReply = [...prev, responseMsg];
-        localStorage.setItem(storedKey, JSON.stringify(withReply));
-        return withReply;
-      });
-    }, 450);
+    if (!inputText.trim() || !contact || isSending) return;
+    setIsSending(true);
+    const sent = await sendMessage(inputText);
+    if (sent) setInputText('');
+    setIsSending(false);
   };
 
   if (!contact) return null;
@@ -159,7 +102,9 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
               <DialogTitle className="text-base leading-snug font-display font-bold text-[#E5E5E5]">
                 {contact.name}
               </DialogTitle>
-              <Badge variant="live-green" className="text-[9px] py-0.5">En línea</Badge>
+              <Badge variant={isRemote ? 'live-green' : 'outline'} className="text-[9px] py-0.5">
+                {isRemote ? 'En vivo' : 'Perfil de ejemplo'}
+              </Badge>
             </div>
             
             <div className="text-xs text-[#9E9E9E] font-mono flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
@@ -185,7 +130,30 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
           </span>
         </div>
 
-        {messages.map((msg) => (
+        {loading && (
+          <div className="space-y-2 animate-pulse" aria-label="Cargando conversación">
+            <div className="h-12 w-2/3 rounded-xl bg-[#141414] border border-[#1E2E26]" />
+            <div className="h-12 w-1/2 rounded-xl bg-[#141414] border border-[#1E2E26] ml-auto" />
+          </div>
+        )}
+
+        {!loading && !error && messages.length === 0 && (
+          <div className="py-10 text-center border border-dashed border-[#1E2E26] bg-[#0E0E0E] px-4">
+            <MessageSquare className="w-7 h-7 mx-auto text-[#15803D] mb-2" />
+            <p className="font-bold text-[#E5E5E5]">Inicia la conversación</p>
+            <p className="text-[10px] text-[#9E9E9E] mt-1 font-sans">
+              Los mensajes quedan guardados y la otra persona los verá al entrar.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="border border-[#F97316]/50 bg-[#F97316]/10 p-3 text-[10px] text-[#FED7AA] font-sans" role="alert">
+            {error}
+          </div>
+        )}
+
+        {!loading && messages.map((msg) => (
           <div 
             key={msg.id}
             className={`flex flex-col ${msg.isSelf ? 'items-end' : 'items-start'}`}
@@ -202,12 +170,17 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
                   {msg.senderName}
                 </div>
               )}
+              {msg.imageUrl && (
+                <div className="mb-2 overflow-hidden border border-[#1E2E26]">
+                  <SafeImage src={msg.imageUrl} alt="Adjunto" fallbackType="product" className="max-h-44 w-full object-cover" />
+                </div>
+              )}
               <p className="font-sans text-xs">{msg.text}</p>
               
               <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-[#666666]">
                 <span>{msg.timestamp}</span>
                 {msg.isSelf && (
-                  <CheckCheck className="w-3 h-3 text-[#15803D]" />
+                  <CheckCheck className={`w-3 h-3 ${msg.status === 'read' ? 'text-[#10B981]' : 'text-[#666666]'}`} />
                 )}
               </div>
             </div>
@@ -229,6 +202,8 @@ export const DirectMessageModal: React.FC<DirectMessageModalProps> = ({
           variant="default"
           size="sm"
           className="px-4 font-bold flex items-center gap-1.5 shrink-0"
+          disabled={isSending || !inputText.trim()}
+          aria-label="Enviar mensaje"
         >
           <Send className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Enviar</span>

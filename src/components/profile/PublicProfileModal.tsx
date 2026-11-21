@@ -26,9 +26,13 @@ import { ENTERPRISE_DIRECTORY, FARMER_DIRECTORY } from '@/services/directoryData
 import { MOCK_USERS } from '@/services/mockData';
 import {
   addReview,
+  findVerifiedOrder,
   getReviewSummary,
   getReviewsForProducer,
+  mergeReviews,
   onReviewsUpdated,
+  StoredReview,
+  subscribeReviewsForProducer,
 } from '@/services/reviewsService';
 import { calculateReputationTier } from '@/services/reputationService';
 import { formatDateOnly, formatUsd } from '@/lib/utils';
@@ -87,11 +91,15 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
   onClose,
   onOpenProduct,
 }) => {
-  const { currentUser, batches } = useAppState();
+  const { currentUser, batches, orders } = useAppState();
   const { success, warning } = useNotification();
   const [tab, setTab] = useState<ProfileTab>('RESUMEN');
   const [productSort, setProductSort] = useState<ProductSort>('NUEVOS');
-  const [reviews, setReviews] = useState(() => getReviewsForProducer(target?.id, target?.name));
+  const [localReviews, setLocalReviews] = useState<StoredReview[]>(() =>
+    getReviewsForProducer(target?.id, target?.name),
+  );
+  const [remoteReviews, setRemoteReviews] = useState<StoredReview[]>([]);
+  const [reviewLoadError, setReviewLoadError] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [chatTarget, setChatTarget] = useState<ChatContact | null>(null);
@@ -115,11 +123,29 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
 
   useEffect(() => {
     setTab('RESUMEN');
-    setReviews(getReviewsForProducer(target?.id, target?.name));
-    return onReviewsUpdated(() => {
-      setReviews(getReviewsForProducer(target?.id, target?.name));
-    });
+    const refreshLocal = () => {
+      setLocalReviews(getReviewsForProducer(target?.id, target?.name));
+    };
+    refreshLocal();
+    const unsubscribeLocal = onReviewsUpdated(refreshLocal);
+    const unsubscribeRemote = open
+      ? subscribeReviewsForProducer(
+          target?.id,
+          target?.name,
+          (items) => {
+            setRemoteReviews(items);
+            setReviewLoadError(null);
+          },
+          () => setReviewLoadError('No se pudieron sincronizar las reseñas.'),
+        )
+      : () => {};
+    return () => {
+      unsubscribeLocal();
+      unsubscribeRemote();
+    };
   }, [target?.id, target?.name, open]);
+
+  const reviews = mergeReviews(remoteReviews, localReviews);
 
   const profile = useMemo(() => {
     if (!target) return null;
@@ -237,6 +263,13 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
   }, [producerBatches, productSort]);
 
   const reviewSummary = getReviewSummary(reviews);
+  const verifiedOrder = profile
+    ? findVerifiedOrder(orders, currentUser.id, {
+        producerId: profile.id,
+        producerName: profile.name,
+      })
+    : undefined;
+  const canReview = Boolean(profile && !profile.isOwn && verifiedOrder);
   const tier = calculateReputationTier(
     Math.round((profile?.reputation || 95) * 10) / 10,
     producerBatches.length > 0 ? 10 : 3,
@@ -249,16 +282,23 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
     producerBatches.find((batch) => batch.images?.[0])?.images?.[0] ||
     undefined;
 
-  const handleSubmitReview = (event: React.FormEvent) => {
+  const handleSubmitReview = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!verifiedOrder) {
+      warning(
+        'Compra no verificada',
+        'Solo puedes reseñar después de recibir una orden entregada de este productor.',
+      );
+      return;
+    }
     if (!comment.trim()) {
       warning('Reseña incompleta', 'Escribe tu experiencia antes de publicar.');
       return;
     }
-    addReview(
+    await addReview(
       {
         id: `REV-${Date.now()}`,
-        orderId: `ESCROW-BARU-${Math.floor(100000 + Math.random() * 900000)}`,
+        orderId: verifiedOrder.orderCode,
         batchId: producerBatches[0]?.id,
         authorId: currentUser.id,
         authorName: currentUser.name,
@@ -270,12 +310,13 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
         qualityCompliant: true,
         onTimeDelivery: true,
         createdAt: new Date().toISOString().slice(0, 10),
+        verified: true,
       },
-      { producerId: profile.id, producerName: profile.name },
+      { producerId: profile.id, producerName: profile.name, verified: true },
     );
-    setReviews(getReviewsForProducer(profile.id, profile.name));
+    setLocalReviews(getReviewsForProducer(profile.id, profile.name));
     setComment('');
-    success('Reseña publicada', `Tu reseña sobre ${profile.name} ya es visible en su perfil.`);
+    success('Reseña verificada publicada', `Tu reseña sobre ${profile.name} ya es visible en su perfil.`);
   };
 
   return (
@@ -547,6 +588,11 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
                     <span className="font-bold text-[#E5E5E5] text-[10px] truncate">
                       {review.authorName}
                     </span>
+                    {review.verified && (
+                      <Badge variant="live-green" className="text-[7px] px-1 py-0 flex items-center gap-0.5 shrink-0">
+                        <ShieldCheck className="w-2 h-2" /> Verificada
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     {[...Array(5)].map((_, index) => (
@@ -568,7 +614,13 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
               </div>
             ))}
 
-            {!profile.isOwn ? (
+            {reviewLoadError && (
+              <div className="border border-[#F97316]/40 bg-[#F97316]/10 p-2 text-[9px] text-[#FED7AA] font-sans" role="status">
+                {reviewLoadError} Se muestran las reseñas guardadas en este dispositivo.
+              </div>
+            )}
+
+            {!profile.isOwn && canReview ? (
               <form onSubmit={handleSubmitReview} className="border border-[#15803D] bg-[#0A0A0A] p-2.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[#E5E5E5] text-[10px] uppercase">Tu reseña</span>
@@ -600,6 +652,11 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({
                   <Send className="w-3 h-3" /> Publicar reseña
                 </Button>
               </form>
+            ) : !profile.isOwn ? (
+              <div className="border border-[#1E2E26] bg-[#0A0A0A] p-2 text-[9px] text-[#9E9E9E] font-sans leading-relaxed">
+                <span className="font-bold text-[#E5E5E5] block mb-1">Reseña con compra verificada</span>
+                Solo puedes reseñar a este productor después de recibir una orden entregada o liberada.
+              </div>
             ) : (
               <div className="border border-[#1E2E26] bg-[#0A0A0A] p-2 text-center text-[9px] text-[#9E9E9E]">
                 Las reseñas de compradores aparecen aquí.

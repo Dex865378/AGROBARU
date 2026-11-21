@@ -9,7 +9,8 @@ import {
   Building2,
   CreditCard,
   Truck,
-  Download
+  Download,
+  Printer
 } from 'lucide-react';
 import { DeliveryMode, EscrowOrder, ProductBatch } from '@/types';
 import { useAppState } from '@/context/AppStateContext';
@@ -19,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
-import { DELIVERY_MODE_LABELS, calculateFreightUsd, downloadOrderReceipt } from '@/services/receiptService';
+import { DELIVERY_MODE_LABELS, calculateFreightUsd, downloadOrderReceipt, printOrderReceipt } from '@/services/receiptService';
 
 interface EscrowCheckoutModalProps {
   batch: ProductBatch | null;
@@ -165,7 +166,16 @@ export const EscrowCheckoutModal: React.FC<EscrowCheckoutModalProps> = ({
               className="flex-1 flex items-center justify-center gap-1.5 text-xs"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Descargar Comprobante</span>
+              <span>Comprobante</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => printOrderReceipt([completedOrder])}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs"
+            >
+              <Printer className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Imprimir / PDF</span>
             </Button>
             <Button
               onClick={() => {

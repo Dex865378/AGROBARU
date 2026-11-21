@@ -26,7 +26,13 @@ import { Badge } from '@/components/ui/badge';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { ProfileBanner } from '@/components/profile/ProfileBanner';
 import { processAvatarUpload, calculateReputationTier, checkUsernameAvailability } from '@/services/reputationService';
-import { getReviewsForProducer, onReviewsUpdated } from '@/services/reviewsService';
+import {
+  getReviewsForProducer,
+  mergeReviews,
+  onReviewsUpdated,
+  StoredReview,
+  subscribeReviewsForProducer,
+} from '@/services/reviewsService';
 import { optimizeBanner } from '@/lib/imageOptimizer';
 import { formatUsd } from '@/lib/utils';
 import { UserProfile, OrderReview } from '@/types';
@@ -59,9 +65,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<{ available?: boolean; message?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [reviews, setReviews] = useState<OrderReview[]>(() =>
+  const [localReviews, setLocalReviews] = useState<StoredReview[]>(() =>
     getReviewsForProducer(currentUser.id, currentUser.name),
   );
+  const [remoteReviews, setRemoteReviews] = useState<StoredReview[]>([]);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -82,10 +89,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   }, [currentUser]);
 
   useEffect(() => {
-    const refresh = () => setReviews(getReviewsForProducer(currentUser.id, currentUser.name));
+    const refresh = () => setLocalReviews(getReviewsForProducer(currentUser.id, currentUser.name));
     refresh();
-    return onReviewsUpdated(refresh);
+    const unsubscribeLocal = onReviewsUpdated(refresh);
+    const unsubscribeRemote = subscribeReviewsForProducer(
+      currentUser.id,
+      currentUser.name,
+      setRemoteReviews,
+    );
+    return () => {
+      unsubscribeLocal();
+      unsubscribeRemote();
+    };
   }, [currentUser.id, currentUser.name]);
+
+  const reviews = mergeReviews(remoteReviews, localReviews);
 
   const myBatches = useMemo(
     () =>

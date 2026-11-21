@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import LegacyAgroBaruApp from './AgroBaruWorkspace';
+const LegacyAgroBaruApp = lazy(() => import('./AgroBaruWorkspace'));
 import {
   AuthLoadingScreen,
   ProtectedRoute,
@@ -12,9 +12,14 @@ import {
 } from '@/components/routing/RouteGuards';
 import { AuthPage } from '@/pages/auth/AuthPage';
 import { RoleSelectionPage } from '@/pages/onboarding/RoleSelectionPage';
-import { ProfilePage } from '@/pages/profile/ProfilePage';
-import { AdminPage } from '@/pages/admin/AdminPage';
+const ProfilePage = lazy(() =>
+  import('@/pages/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })),
+);
+const AdminPage = lazy(() =>
+  import('@/pages/admin/AdminPage').then((module) => ({ default: module.AdminPage })),
+);
 import { registerServiceWorker } from '@/lib/registerServiceWorker';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function RootGate() {
   const { user, profile, loading, profileLoading } = useAuth();
@@ -44,7 +49,9 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <AuthProvider>
+        <Suspense fallback={<AuthLoadingScreen message="Cargando AgroBarú..." />}>
         <Routes>
           {/* Entrada: acceso empresarial, onboarding y redirección por rol */}
           <Route path="/" element={<RootGate />} />
@@ -133,7 +140,9 @@ export function App() {
           {/* Rutas heredadas con hash siguen resolviéndose dentro del sitio público */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </AuthProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

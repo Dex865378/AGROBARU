@@ -461,7 +461,7 @@ export const ProductCatalog: React.FC<{
                           type="button"
                           onClick={() =>
                             setSelectedPublicProfile({
-                              id: batch.farmId,
+                              id: batch.producerId || batch.farmId,
                               name: batch.producerName,
                               role: 'productor',
                               location: batch.corregimiento,
@@ -614,7 +614,7 @@ export const ProductCatalog: React.FC<{
                   <div className="pt-3 border-t border-slate-800">
                     <BatchReviewsSection
                       batchId={batch.id}
-                      producerId={batch.farmId}
+                      producerId={batch.producerId || batch.farmId}
                       producerName={batch.producerName}
                       onOpenProfile={(target) =>
                         setSelectedPublicProfile({
@@ -644,7 +644,7 @@ export const ProductCatalog: React.FC<{
                     <button
                       onClick={() => {
                         const contact: ChatContact = {
-                          id: batch.farmId || batch.id,
+                          id: batch.producerId || batch.farmId || batch.id,
                           name: batch.producerName,
                           corregimiento: batch.corregimiento,
                           reputation: batch.producerReputation || 99.4

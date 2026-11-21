@@ -7,6 +7,7 @@ import {
   Lock, 
   DollarSign,
   Download,
+  Printer,
   MapPin
 } from 'lucide-react';
 import { useAppState } from '@/context/AppStateContext';
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogCloseButton } from '@/components/ui/dialog';
 import { formatCurrency, truncateHash } from '@/lib/utils';
-import { downloadOrderReceipt } from '@/services/receiptService';
+import { downloadOrderReceipt, printOrderReceipt } from '@/services/receiptService';
 
 export const OrderTracker: React.FC = () => {
   const { orders, advanceEscrowStatus } = useAppState();
@@ -217,6 +218,17 @@ export const OrderTracker: React.FC = () => {
                     >
                       <Download className="w-3 h-3 text-emerald-400 shrink-0" />
                       <span>Comprobante</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => printOrderReceipt([order])}
+                      className="min-h-8 h-auto py-1 px-2 text-[11px] flex items-center gap-1"
+                      title="Imprimir o guardar la factura en PDF"
+                      aria-label="Imprimir o guardar la factura en PDF"
+                    >
+                      <Printer className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>PDF</span>
                     </Button>
                   </div>
 

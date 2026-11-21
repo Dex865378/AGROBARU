@@ -553,7 +553,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
                   onClick={() => {
                     onClose();
                     onOpenProducerProfile({
-                      id: batch.farmId,
+                      id: batch.producerId || batch.farmId,
                       name: batch.producerName,
                       role: 'productor',
                       location: batch.corregimiento,
@@ -1022,7 +1022,7 @@ export const BatchDetailWithEvidenceModal: React.FC<BatchDetailWithEvidenceModal
         isOpen={isDirectChatOpen}
         onClose={() => setIsDirectChatOpen(false)}
         contact={batch ? {
-          id: batch.farmId || batch.id,
+          id: batch.producerId || batch.farmId || batch.id,
           name: batch.producerName,
           corregimiento: batch.corregimiento,
           reputation: batch.producerReputation || 99.4

@@ -101,7 +101,56 @@ service cloud.firestore {
         && (resource.data.producerId == request.auth.uid || isAdmin());
     }
 
-    // 9. Comunidad agrícola (mensajes compartidos en tiempo real)
+    // 9. Chat directo entre cuentas reales (una sala por pareja de UIDs)
+    // El id de la sala es determinista: uidA__uidB (ordenados).
+    function isDirectChatParticipant(conversationId) {
+      return request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/directConversations/$(conversationId)).data.participants;
+    }
+
+    match /directConversations/{conversationId} {
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.participants;
+      allow create: if request.auth != null
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == 2
+        && request.auth.uid in request.resource.data.participants;
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.participants == resource.data.participants;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read, update: if isDirectChatParticipant(conversationId);
+        allow create: if isDirectChatParticipant(conversationId)
+          && request.resource.data.senderId == request.auth.uid;
+        allow delete: if isDirectChatParticipant(conversationId)
+          && (resource.data.senderId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // 10. Reseñas de compradores (lectura pública, autoría autenticada)
+    match /orderReviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 1500
+        && request.resource.data.verified is bool;
+      allow update: if request.auth != null
+        && resource.data.authorId == request.auth.uid
+        && request.resource.data.authorId == resource.data.authorId
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow delete: if request.auth != null
+        && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // 11. Comunidad agrícola (mensajes compartidos en tiempo real)
     // Cualquier usuario autenticado puede leer y reaccionar; solo el autor
     // puede borrar su mensaje y el administrador puede moderar.
     match /communityMessages/{groupId}/messages/{messageId} {

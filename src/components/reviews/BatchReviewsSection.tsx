@@ -18,7 +18,15 @@ import { useNotification } from '@/context/NotificationContext';
 import { calculateReputationTier } from '@/services/reputationService';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { formatDateOnly } from '@/lib/utils';
-import { addReview, getReviewsForBatch, onReviewsUpdated } from '@/services/reviewsService';
+import {
+  addReview,
+  findVerifiedOrder,
+  getReviewsForBatch,
+  mergeReviews,
+  onReviewsUpdated,
+  StoredReview,
+  subscribeReviewsForBatch,
+} from '@/services/reviewsService';
 
 interface BatchReviewsSectionProps {
   batchId: string;
@@ -35,22 +43,48 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
   initialReviews = [],
   onOpenProfile,
 }) => {
-  const { currentUser, firebaseUser } = useAppState();
+  const { currentUser, firebaseUser, orders } = useAppState();
   const { language, translateText } = useLanguage();
   const { success, warning } = useNotification();
 
-  const [reviews, setReviews] = useState<OrderReview[]>(() =>
+  const [localReviews, setLocalReviews] = useState<StoredReview[]>(() =>
     getReviewsForBatch(batchId, producerName, producerId, initialReviews),
   );
+  const [remoteReviews, setRemoteReviews] = useState<StoredReview[]>([]);
+  const [reviewLoadError, setReviewLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setReviews(getReviewsForBatch(batchId, producerName, producerId, initialReviews));
-    return onReviewsUpdated(() => {
-      setReviews(getReviewsForBatch(batchId, producerName, producerId, initialReviews));
-    });
+    const refreshLocal = () => {
+      setLocalReviews(getReviewsForBatch(batchId, producerName, producerId, initialReviews));
+    };
+    refreshLocal();
+    const unsubscribeLocal = onReviewsUpdated(refreshLocal);
+    const unsubscribeRemote = subscribeReviewsForBatch(
+      batchId,
+      (items) => {
+        setRemoteReviews(items);
+        setReviewLoadError(null);
+      },
+      () => setReviewLoadError('No se pudieron sincronizar las reseñas en este momento.'),
+    );
+    return () => {
+      unsubscribeLocal();
+      unsubscribeRemote();
+    };
     // initialReviews es una semilla; no debe reiniciar el estado en cada render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId, producerName, producerId]);
+
+  const reviews = mergeReviews(remoteReviews, localReviews);
+  const verifiedOrder = findVerifiedOrder(orders, currentUser.id, {
+    batchId,
+    producerId,
+    producerName,
+  });
+  const canReview =
+    Boolean(firebaseUser) &&
+    Boolean(verifiedOrder) &&
+    (!producerId || producerId !== currentUser.id);
 
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
@@ -62,8 +96,15 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : '5.0';
 
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!verifiedOrder) {
+      warning(
+        'Compra no verificada',
+        'Solo puedes reseñar después de recibir una orden de este lote.',
+      );
+      return;
+    }
     if (!comment.trim()) {
       warning('Comentario Requerido', 'Escribe tu experiencia sobre el lote o la entrega.');
       return;
@@ -72,7 +113,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
     setIsSubmitting(true);
     const newReview: OrderReview = {
       id: `REV-${Date.now()}`,
-      orderId: `ESCROW-BARU-${Math.floor(100000 + Math.random() * 900000)}`,
+      orderId: verifiedOrder.orderCode,
       batchId,
       authorId: currentUser.id,
       authorName: currentUser.name,
@@ -84,13 +125,20 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
       qualityCompliant,
       onTimeDelivery,
       createdAt: new Date().toISOString().split('T')[0],
+      verified: true,
     };
 
-    addReview(newReview, { producerId, producerName });
-    setReviews(prev => [newReview, ...prev]);
+    await addReview(newReview, {
+      producerId,
+      producerName,
+      verified: true,
+    });
     setComment('');
     setIsSubmitting(false);
-    success('Reseña Publicada', 'Tu comentario y calificación se han agregado a la reputación del productor.');
+    success(
+      'Reseña verificada publicada',
+      'Tu comentario quedó asociado a una compra entregada y ya es visible para la comunidad.',
+    );
   };
 
   return (
@@ -117,6 +165,11 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
           100% {language === 'en' ? 'Audit Verified' : 'Auditado'}
         </Badge>
       </div>
+      {reviewLoadError && (
+        <div className="border border-[#F97316]/40 bg-[#F97316]/10 px-3 py-2 text-[10px] text-[#FED7AA] font-sans" role="status">
+          {reviewLoadError} Se muestran las reseñas guardadas en este dispositivo.
+        </div>
+      )}
 
       {/* Reviews List */}
       <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
@@ -151,6 +204,11 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
                   <Badge variant="purple" className="text-[8px]">
                     {rev.authorRole === 'buyer' ? 'Comprador Internacional' : 'Productor Barú'}
                   </Badge>
+                  {rev.verified && (
+                    <Badge variant="live-green" className="text-[8px] flex items-center gap-0.5">
+                      <ShieldCheck className="w-2.5 h-2.5" /> Compra verificada
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1 text-[#FACC15]">
@@ -185,7 +243,18 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
         })}
       </div>
 
-      {/* Add Review Form */}
+      {/* Add Review Form: solo compradores con orden entregada o liberada */}
+      {!canReview ? (
+        <div className="bg-[#0E0E0E] border border-[#1E293B] p-3 text-[10px] text-[#9E9E9E] font-sans leading-relaxed">
+          <div className="flex items-center gap-1.5 font-bold text-[#E5E5E5] uppercase font-mono mb-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#FACC15]" />
+            Reseñas con compra verificada
+          </div>
+          {!firebaseUser
+            ? 'Inicia sesión para reseñar un lote.'
+            : 'Solo los compradores con una orden entregada o con fondos Escrow liberados pueden publicar una reseña. Cuando completes una compra, aparecerá aquí tu formulario.'}
+        </div>
+      ) : (
       <form onSubmit={handleSubmitReview} className="bg-[#0E0E0E] border-2 border-[#15803D] p-3 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-bold text-[#E5E5E5] text-[11px] uppercase flex items-center gap-1.5">
@@ -242,6 +311,7 @@ export const BatchReviewsSection: React.FC<BatchReviewsSectionProps> = ({
           </Button>
         </div>
       </form>
+      )}
     </div>
   );
 };
