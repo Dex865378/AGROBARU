@@ -80,7 +80,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2 text-[#9E9E9E] min-w-0">
           <span className="flex items-center gap-1.5 text-[#10B981] font-semibold truncate">
             <Radio className="w-3.5 h-3.5 text-[#10B981] shrink-0" strokeWidth={1.75} />
-            <span className="truncate">{language === 'en' ? 'Official AgroBarú Network | Puerto Armuelles' : 'Red AgroBarú Oficial | Puerto Armuelles'}</span>
+            <span className="hidden truncate sm:inline">
+              {language === 'en' ? 'Official AgroBarú Network | Puerto Armuelles' : 'Red AgroBarú Oficial | Puerto Armuelles'}
+            </span>
+            <span className="truncate sm:hidden">
+              {language === 'en' ? 'AgroBarú · Barú' : 'AgroBarú · Barú'}
+            </span>
           </span>
         </div>
 
@@ -163,19 +168,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Acceso empresarial real (correo / Google) */}
-          <Link
-            to="/login"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#1E2E26] hover:border-[#10B981]/50 text-[#9E9E9E] hover:text-[#E5E5E5] text-[10px] font-bold transition-all"
-            title="Acceso empresarial con correo electrónico o Google"
-          >
-            <Building2 className="w-3 h-3 text-[#10B981]" />
-            <span className="hidden lg:inline">Acceso Empresarial</span>
-          </Link>
+          {/* Acceso empresarial real (correo / Google): solo para visitantes */}
+          {!firebaseUser && (
+            <Link
+              to="/login"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#111714] hover:bg-[#161E19] border border-[#1E2E26] hover:border-[#10B981]/50 text-[#9E9E9E] hover:text-[#E5E5E5] text-[10px] font-bold transition-all"
+              title="Acceso empresarial con correo electrónico o Google"
+            >
+              <Building2 className="w-3 h-3 text-[#10B981]" />
+              <span className="hidden lg:inline">Acceso Empresarial</span>
+            </Link>
+          )}
 
           {/* Google Auth Status / Reputation Button */}
           {firebaseUser ? (
-            <div className="flex items-center gap-1.5 bg-[#111714] border border-[#10B981]/40 rounded-lg px-2 py-0.5">
+            <div className="hidden sm:flex items-center gap-1.5 bg-[#111714] border border-[#10B981]/40 rounded-lg px-2 py-0.5">
               <button
                 onClick={() => {
                   setActiveTab('profile');
